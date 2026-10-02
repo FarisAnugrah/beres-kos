@@ -46,10 +46,26 @@ client.on('message_create', async (msg) => {
       rawSender = client.info.wid.user;
     } else {
       // Jika orang lain yang ngetik laporan
+      // msg.author biasanya berisi nomor WA asli yang tersambung di multi-device, sedangkan msg.from bisa saja LID/Group ID.
+      // Kita pakai msg.author jika ada, lalu msg.from
       rawSender = msg.author ? msg.author : msg.from;
     }
 
-    const sender = rawSender.replace('@c.us', '').replace('@lid', ''); // Format: 628...
+    let sender = rawSender.replace('@c.us', '').replace('@lid', '').replace('@s.whatsapp.net', '');
+
+    // JARING PENGAMAN (ULTIMATE FALLBACK):
+    // Jika WhatsApp masih saja berkeras menyembunyikan identitas pengirim asli dan malah mengirimkan LID (awalan 860...),
+    // kita akan "memaksa" membaca nomor WA tersebut dengan melihat dari objek _data mentah_ milik pesan.
+    if (sender.startsWith('860') || sender.length > 15) {
+      // Mencoba mendongkel nomor asli dari dalam _data mentah
+      const possibleRealNumber =
+        msg._data?.notifyName || msg._data?.author?.split('@')[0] || msg.from?.split('@')[0];
+
+      // Kadang contact object yang dikembalikan getContact punya properti number yang kosong tapi id.user berisi nomor asli.
+      if (contact && contact.id && contact.id.user && !contact.id.user.startsWith('860')) {
+        sender = contact.id.user;
+      }
+    }
 
     console.log(
       '[DEBUG WA] Laporan masuk. rawSender:',
