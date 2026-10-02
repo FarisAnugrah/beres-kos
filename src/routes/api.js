@@ -12,7 +12,8 @@ const upload = multer({ dest: 'uploads/' });
 router.get('/rooms', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT r.*, rl.id as active_lease_id, t.name as tenant_name 
+      SELECT r.*, rl.id as active_lease_id, t.name as tenant_name,
+             rl.start_date, rl.due_day_of_month
       FROM rooms r 
       LEFT JOIN room_leases rl ON r.id = rl.room_id AND rl.status = 'ACTIVE'
       LEFT JOIN tenants t ON rl.tenant_id = t.id

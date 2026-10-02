@@ -83,17 +83,33 @@ export default function Dashboard() {
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
         {rooms.map((room: any) => (
-          <div key={room.id} className={`p-6 rounded-2xl border-2 transition-all shadow-sm ${room.status === 'VACANT' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <div key={room.id} className={`p-6 rounded-2xl border-2 transition-all shadow-sm flex flex-col ${room.status === 'VACANT' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
             <h3 className="text-3xl font-black text-slate-800 mb-1">{room.room_number}</h3>
-            <p className="text-slate-600 mb-6 font-medium h-6">
+            <p className="text-slate-700 mb-2 font-bold h-6">
               {room.status === 'VACANT' ? 'Kosong' : room.tenant_name}
             </p>
+            
+            {room.status === 'OCCUPIED' ? (
+              <div className="text-xs text-slate-600 mb-4 bg-white/60 p-3 rounded-lg border border-red-100 flex-grow">
+                <div className="flex justify-between border-b border-red-100 pb-1 mb-1">
+                  <span>Mulai Sewa:</span>
+                  <span className="font-bold">{new Date(room.start_date).toLocaleDateString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Jatuh Tempo:</span>
+                  <span className="font-bold text-red-600">Tgl {room.due_day_of_month}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-grow"></div>
+            )}
+
             {room.status === 'VACANT' ? (
-              <button onClick={() => openCheckIn(room.id)} className="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 hover:shadow-md transition-all active:scale-95">
+              <button onClick={() => openCheckIn(room.id)} className="w-full mt-auto bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 hover:shadow-md transition-all active:scale-95">
                 Form Check-In
               </button>
             ) : (
-              <button onClick={() => checkOut(room.active_lease_id)} className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 hover:shadow-md transition-all active:scale-95">
+              <button onClick={() => checkOut(room.active_lease_id)} className="w-full mt-auto bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 hover:shadow-md transition-all active:scale-95">
                 Check-Out
               </button>
             )}
