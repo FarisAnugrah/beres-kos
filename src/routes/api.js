@@ -47,7 +47,28 @@ router.get('/tickets', async (req, res) => {
 // Endpoint untuk menyelesaikan tiket
 router.post('/tickets/:id/resolve', async (req, res) => {
   try {
-    await pool.query(`UPDATE tickets SET status = 'RESOLVED' WHERE id = $1`, [req.params.id]);
+    const ticketId = req.params.id;
+    await pool.query(`UPDATE tickets SET status = 'RESOLVED' WHERE id = $1`, [ticketId]);
+
+    // Opsional: Ambil nomor WA penyewa untuk dikabari via Bot
+    const { rows } = await pool.query(
+      `
+      SELECT t.description, r.room_number, ten.phone_number, ten.name
+      FROM tickets t
+      JOIN rooms r ON t.room_id = r.id
+      JOIN room_leases rl ON r.id = rl.room_id AND rl.status = 'ACTIVE'
+      JOIN tenants ten ON rl.tenant_id = ten.id
+      WHERE t.id = $1
+    `,
+      [ticketId]
+    );
+
+    if (rows.length > 0) {
+      const { description, room_number, phone_number, name } = rows[0];
+      const message = `Halo ${name},\n\nLaporan kerusakan Anda untuk Kamar ${room_number} telah *Selesai Dikerjakan* oleh Admin/Teknisi.\n\n_Keluhan awal: "${description}"_\n\nTerima kasih telah lapor ke BeresKos!`;
+      sendWA(phone_number, message);
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
