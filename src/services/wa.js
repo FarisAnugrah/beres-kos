@@ -1,5 +1,6 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const qrcodeTerminal = require('qrcode-terminal');
+const qrcode = require('qrcode');
 
 console.log('[WA] Menginisialisasi Bot WhatsApp...');
 
@@ -16,7 +17,7 @@ client.on('qr', (qr) => {
   console.log('\n=============================================');
   console.log('[WA] SCAN QR CODE INI MENGGUNAKAN WHATSAPP ANDA:');
   console.log('=============================================\n');
-  qrcode.generate(qr, { small: true });
+  qrcodeTerminal.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
