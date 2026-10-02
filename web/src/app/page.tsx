@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [detailRoom, setDetailRoom] = useState<any>(null);
+  const [checkOutRoom, setCheckOutRoom] = useState<any>(null);
   const [filterType, setFilterType] = useState('ALL');
 
   const loadData = async () => {
@@ -76,15 +77,17 @@ export default function Dashboard() {
     loadData();
   };
 
-  const checkOut = async (leaseId: string) => {
-    if (!confirm('Yakin Check-out? Sistem akan hitung otomatis tagihan berjalan.')) return;
+  const handleConfirmCheckOut = async (leaseId: string) => {
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ leaseId }),
     });
     const data = await res.json();
-    alert(`Check-out berhasil. Tagihan akhir: Rp ${data.finalBill.toLocaleString('id-ID')}`);
+    setCheckOutRoom(null);
+    alert(
+      `Status kamar berhasil dikosongkan!\nInvoice terakhir terbit: Rp ${data.finalBill.toLocaleString('id-ID')}\n(Pesan WA otomatis + QRIS telah terkirim)`
+    );
     loadData();
   };
 
@@ -300,7 +303,7 @@ export default function Dashboard() {
                     Detail Penyewa
                   </button>
                   <button
-                    onClick={() => checkOut(room.active_lease_id)}
+                    onClick={() => setCheckOutRoom(room)}
                     className="w-full bg-white text-rose-600 border border-rose-200 font-bold py-3 rounded-2xl hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm"
                   >
                     Proses Check-Out

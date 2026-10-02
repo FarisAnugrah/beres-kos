@@ -3,3 +3,4 @@
 > node --env-file=.env src/server.js
 
 API jalan di port 3000
+[WA] Mengirim pesan selamat datang & link ledger galon ke 018309128301
