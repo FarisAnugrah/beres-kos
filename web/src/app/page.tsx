@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [detailRoom, setDetailRoom] = useState<any>(null);
+  const [filterType, setFilterType] = useState('ALL');
 
   const loadData = async () => {
     try {
@@ -96,6 +97,11 @@ export default function Dashboard() {
 
   const occupiedCount = rooms.filter((r: any) => r.status === 'OCCUPIED').length;
   const vacantCount = rooms.length - occupiedCount;
+
+  const filteredRooms = rooms.filter((r: any) => {
+    if (filterType === 'ALL') return true;
+    return Number(r.monthly_price) === Number(filterType);
+  });
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-800">
@@ -199,9 +205,37 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* Filter UI */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setFilterType('ALL')}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${filterType === 'ALL' ? 'bg-slate-800 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            Semua Tipe
+          </button>
+          <button
+            onClick={() => setFilterType('1200000')}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${filterType === '1200000' ? 'bg-slate-800 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            Standar (Rp 1.2M)
+          </button>
+          <button
+            onClick={() => setFilterType('1500000')}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${filterType === '1500000' ? 'bg-slate-800 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            Menengah (Rp 1.5M)
+          </button>
+          <button
+            onClick={() => setFilterType('2000000')}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${filterType === '2000000' ? 'bg-slate-800 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            VIP (Rp 2.0M)
+          </button>
+        </div>
+
         {/* Room Grid (FinTrack Style Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {rooms.map((room: any) => (
+          {filteredRooms.map((room: any) => (
             <div
               key={room.id}
               className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all flex flex-col group"
