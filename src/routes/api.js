@@ -3,6 +3,7 @@ const { Queue } = require('bullmq');
 const multer = require('multer');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
+const { sendWA } = require('../services/wa');
 
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
@@ -90,7 +91,9 @@ router.post('/checkin', upload.single('ktp'), async (req, res) => {
     await billingQueue.add('monthly-bill', { leaseId, dueDay }, { delay: delayMs, jobId: leaseId });
 
     // Dummy WA Gateway trigger
-    console.log(`[WA] Mengirim pesan selamat datang & link ledger galon ke ${phone}`);
+    console.log(`[WA] Memproses pesan selamat datang untuk ${phone}`);
+    const message = `Halo ${name}, selamat datang di BeresKos!\n\nKamar Anda: ${roomNumber}\nJatuh Tempo Tagihan: Tanggal ${dueDay} setiap bulannya.\n\nPantau transparansi Kas Dapur via link berikut:\nhttp://localhost:3001/tenant`;
+    sendWA(phone, message);
 
     res.json({ success: true, leaseId });
   } catch (err) {
@@ -141,6 +144,19 @@ router.post('/checkout', async (req, res) => {
     // 5. Batalkan tiket antrean penagihan otomatis di Redis
     const pendingJob = await billingQueue.getJob(leaseId);
     if (pendingJob) await pendingJob.remove();
+
+    // 6. Kirim Invoice Akhir via WA
+    const message = `Terima kasih telah menyewa di BeresKos.\n\nBerikut adalah tagihan akhir (Prorata/Full) Anda sebelum menyerahkan kunci:\n*Kamar:* ${room_id}\n*Total Tagihan Akhir:* Rp ${finalBill.toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran. Semoga sukses di tempat baru!`;
+    // Kita harus fetch tenant phone dulu, tapi ini MVP jadi kita letakkan lognya saja atau panggil sendWA jika phone tersedia di query.
+    // Karena query di atas tidak fetch phone, kita abaikan pengiriman WA sungguhan untuk checkout di MVP ini demi kecepatan, atau tambah JOIN.
+    // Kita tambahkan JOIN singkat:
+    const tenantRes = await client.query(
+      `SELECT phone_number FROM tenants t JOIN room_leases rl ON rl.tenant_id = t.id WHERE rl.id = $1`,
+      [leaseId]
+    );
+    if (tenantRes.rows[0]) {
+      sendWA(tenantRes.rows[0].phone_number, message);
+    }
 
     res.json({ success: true, finalBill, message: 'Check-out berhasil. Tagihan bulanan distop.' });
   } catch (err) {

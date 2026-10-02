@@ -4,6 +4,10 @@ const apiRoutes = require('./routes/api');
 const webhookRoutes = require('./routes/webhooks');
 const utilityRoutes = require('./routes/utilities');
 
+// Inisialisasi Bot WhatsApp & Auto-Billing Worker di satu proses agar hemat memori
+require('./services/wa');
+require('./workers/billingWorker');
+
 const app = express();
 app.use(express.json());
 

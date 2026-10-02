@@ -1,6 +1,7 @@
 const { Worker } = require('bullmq');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
+const { sendWA } = require('../services/wa');
 
 console.log('Worker penagihan aktif, menunggu antrean H-3...');
 
@@ -13,24 +14,32 @@ const worker = new Worker(
     try {
       // 1. Validasi DB: Pastikan status kontrak masih ACTIVE
       const { rows } = await client.query(
-        `SELECT rl.status, r.monthly_price FROM room_leases rl JOIN rooms r ON rl.room_id = r.id WHERE rl.id = $1`,
+        `SELECT rl.status, r.monthly_price, r.room_number, t.phone_number, t.name 
+         FROM room_leases rl 
+         JOIN rooms r ON rl.room_id = r.id 
+         JOIN tenants t ON rl.tenant_id = t.id
+         WHERE rl.id = $1`,
         [leaseId]
       );
 
       if (!rows.length || rows[0].status !== 'ACTIVE') return;
+
+      const tenant = rows[0];
+      const totalBilled = parseFloat(tenant.monthly_price) + 20000; // Sewa + Galon
 
       await client.query('BEGIN');
 
       // 2. Generate Invoice Baru
       await client.query(`INSERT INTO invoices (lease_id, total_amount) VALUES ($1, $2)`, [
         leaseId,
-        rows[0].monthly_price,
+        totalBilled,
       ]);
 
       await client.query('COMMIT');
 
-      // 3. Dummy: Kirim pesan tagihan + QRIS ke WA
-      console.log(`[WA] Mengirim invoice Rp ${rows[0].monthly_price} ke penyewa...`);
+      // 3. Kirim pesan tagihan + QRIS ke WA
+      const waMsg = `Halo ${tenant.name},\n\nIni adalah pengingat tagihan bulanan BeresKos untuk Kamar ${tenant.room_number}.\n\nJatuh tempo: Tanggal ${dueDay}\nTotal: *Rp ${totalBilled.toLocaleString('id-ID')}*\n(Sewa Kamar + Kas Dapur Rp20.000)\n\nHarap lakukan pembayaran.\nCek transparansi kas: http://localhost:3001/tenant`;
+      await sendWA(tenant.phone_number, waMsg);
 
       // 4. AUTO-CHAINING: Jadwalkan tiket untuk bulan depan
       const nextMonth = new Date();
@@ -42,7 +51,9 @@ const worker = new Worker(
         { leaseId, dueDay },
         { delay: Math.max(0, nextMonth.getTime() - Date.now()), jobId: leaseId }
       );
-      console.log(`[Worker] Selesai. Tagihan bulan depan disiapkan.`);
+      console.log(
+        `[Worker] Selesai. Tagihan bulan depan disiapkan untuk kamar ${tenant.room_number}.`
+      );
     } catch (err) {
       await client.query('ROLLBACK');
       console.error(err);
