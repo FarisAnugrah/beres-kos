@@ -44,4 +44,54 @@ router.post('/checkin', async (req, res) => {
   }
 });
 
+router.post('/checkout', async (req, res) => {
+  const { leaseId } = req.body;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Ambil data sewa dan harga kamar
+    const { rows } = await client.query(
+      `SELECT rl.room_id, r.monthly_price, rl.status FROM room_leases rl JOIN rooms r ON rl.room_id = r.id WHERE rl.id = $1`,
+      [leaseId]
+    );
+
+    if (!rows.length || rows[0].status !== 'ACTIVE') {
+      return res.status(400).json({ error: 'Kontrak tidak ditemukan atau sudah tidak aktif' });
+    }
+
+    const { room_id, monthly_price } = rows[0];
+    const checkoutDay = new Date().getDate(); // Tanggal hari ini
+
+    // 2. Hitung Prorata (<= 5 hari = 50rb/hari, > 5 hari = Harga Full)
+    const finalBill = checkoutDay <= 5 ? checkoutDay * 50000 : monthly_price;
+
+    // 3. Update Status Kamar & Kontrak
+    await client.query(`UPDATE room_leases SET status = 'TERMINATED' WHERE id = $1`, [leaseId]);
+    await client.query(`UPDATE rooms SET status = 'VACANT' WHERE id = $1`, [room_id]);
+
+    // 4. Buat invoice terakhir
+    if (finalBill > 0) {
+      await client.query(
+        `INSERT INTO invoices (lease_id, total_amount, status) VALUES ($1, $2, 'UNPAID')`,
+        [leaseId, finalBill]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // 5. Batalkan tiket antrean penagihan otomatis di Redis
+    const pendingJob = await billingQueue.getJob(leaseId);
+    if (pendingJob) await pendingJob.remove();
+
+    res.json({ success: true, finalBill, message: 'Check-out berhasil. Tagihan bulanan distop.' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
