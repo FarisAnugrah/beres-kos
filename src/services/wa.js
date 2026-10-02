@@ -36,14 +36,17 @@ client.on('message_create', async (msg) => {
     // Tarik kontak/pengirim aslinya langsung dari API Message untuk mencegah format @lid
     let contact = await msg.getContact();
 
-    // Fallback: Jika contact.number masih mengembalikan LID yang tidak valid (kasus khusus WhatsApp Multi-Device Self-Chat),
-    // kita memaksa menarik nomor dari Author, atau menganggap bahwa pesan "Lapor" yang dikirim ke diri sendiri ini
-    // HARUS menggunakan nomor HP utama dari profil Client WA bot kita sendiri.
+    // Fallback: Jika pesan ini adalah pesan MENGIRIM DARI diri sendiri (bot nge-chat diri sendiri),
+    // pastikan kita mengambil tujuan pesan tersebut (yang mana adalah nomor kita sendiri atau nomor lawan).
     let rawSender = contact.number;
 
-    if (!rawSender || rawSender.startsWith('860') || rawSender.length > 13) {
-      // Jika nomor aneh (seperti 86006753665190), maka kita tarik ID utama kita sendiri
+    // Tarik langsung nomor asli pengirim chat tersebut tanpa peduli format Multi-Device WA
+    if (msg.fromMe) {
+      // Jika bot yang ngetik laporan (ngechat bot lain / ngechat diri sendiri)
       rawSender = client.info.wid.user;
+    } else {
+      // Jika orang lain yang ngetik laporan
+      rawSender = msg.author ? msg.author : msg.from;
     }
 
     const sender = rawSender.replace('@c.us', '').replace('@lid', ''); // Format: 628...
