@@ -1,0 +1,5 @@
+
+> bereskos@1.0.0 start
+> node --env-file=.env src/server.js
+
+API jalan di port 3000

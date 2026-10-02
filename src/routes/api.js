@@ -25,6 +25,19 @@ router.get('/rooms', async (req, res) => {
   }
 });
 
+router.post('/rooms', async (req, res) => {
+  const { roomNumber, monthlyPrice } = req.body;
+  try {
+    await pool.query(`INSERT INTO rooms (room_number, monthly_price) VALUES ($1, $2)`, [
+      roomNumber,
+      monthlyPrice,
+    ]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/checkin', upload.single('ktp'), async (req, res) => {
   const { roomId, name, phone, dueDay, startDate } = req.body;
   const ktpUrl = req.file ? `/uploads/${req.file.filename}` : null;
