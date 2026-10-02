@@ -56,9 +56,9 @@ const sendWAWithQRIS = async (phone, message) => {
     let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
     const chatId = `${formatted}@c.us`;
 
-    // Mengirim Dummy Gambar QR Code
+    // Mengirim Dummy Gambar QR Code berformat PNG (WA menolak file SVG)
     const media = await MessageMedia.fromUrl(
-      'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'
+      'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=DUMMY_QRIS_BERESKOS_PAYMENT'
     );
     await client.sendMessage(chatId, media, { caption: message });
 
