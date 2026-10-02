@@ -579,28 +579,30 @@ export default function Dashboard() {
             {tickets.map((t: any) => (
               <div
                 key={t.id}
-                className={`p-6 rounded-2xl border-2 transition-all shadow-sm ${t.status === 'PENDING' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-60'}`}
+                className={`p-6 rounded-2xl border-2 transition-all shadow-sm flex flex-col ${t.status === 'PENDING' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-60'}`}
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div className="min-w-0 pr-2">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       Kamar {t.room_number}
                     </span>
-                    <span className="font-bold text-slate-800">{t.tenant_name}</span>
+                    <span className="font-bold text-slate-800 break-words block">
+                      {t.tenant_name}
+                    </span>
                   </div>
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full ${t.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}
+                    className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${t.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}
                   >
                     {t.status === 'PENDING' ? 'Perlu Dicek' : 'Selesai'}
                   </span>
                 </div>
-                <p className="text-slate-700 font-medium mb-6 bg-white p-4 rounded-xl border border-slate-100 italic">
+                <div className="text-slate-700 font-medium mb-6 bg-white p-4 rounded-xl border border-slate-100 italic break-words flex-grow">
                   "{t.description}"
-                </p>
+                </div>
                 {t.status === 'PENDING' && (
                   <button
                     onClick={() => resolveTicket(t.id)}
-                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-sm"
+                    className="w-full mt-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-sm"
                   >
                     Tandai Sudah Diperbaiki
                   </button>
