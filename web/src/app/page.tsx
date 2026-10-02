@@ -15,6 +15,11 @@ export default function Dashboard() {
   const [checkOutRoom, setCheckOutRoom] = useState<any>(null);
   const [filterType, setFilterType] = useState('ALL');
 
+  // Pagination & Filter untuk Tagihan
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [invoiceFilterDate, setInvoiceFilterDate] = useState('');
+  const INVOICE_PER_PAGE = 5;
+
   const loadData = async () => {
     try {
       const resR = await fetch('/api/rooms');
@@ -110,6 +115,18 @@ export default function Dashboard() {
     if (filterType === 'ALL') return true;
     return Number(r.monthly_price) === Number(filterType);
   });
+
+  const filteredInvoices = invoices.filter((inv: any) => {
+    if (!invoiceFilterDate) return true;
+    const invDate = new Date(inv.created_at).toISOString().split('T')[0];
+    return invDate === invoiceFilterDate;
+  });
+
+  const totalInvoicePages = Math.ceil(filteredInvoices.length / INVOICE_PER_PAGE);
+  const displayedInvoices = filteredInvoices.slice(
+    (invoicePage - 1) * INVOICE_PER_PAGE,
+    invoicePage * INVOICE_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-800">
@@ -334,8 +351,19 @@ export default function Dashboard() {
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Invoice History */}
           <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-6">Riwayat Tagihan Sewa</h3>
-            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">Riwayat Tagihan Sewa</h3>
+              <input
+                type="date"
+                value={invoiceFilterDate}
+                onChange={(e) => {
+                  setInvoiceFilterDate(e.target.value);
+                  setInvoicePage(1);
+                }}
+                className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none"
+              />
+            </div>
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden flex flex-col">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -345,7 +373,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {invoices.slice(0, 10).map((inv: any) => (
+                  {displayedInvoices.map((inv: any) => (
                     <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-800">{inv.tenant_name}</div>
@@ -370,7 +398,7 @@ export default function Dashboard() {
                       </td>
                     </tr>
                   ))}
-                  {invoices.length === 0 && (
+                  {filteredInvoices.length === 0 && (
                     <tr>
                       <td colSpan={3} className="py-8 text-center text-slate-400 font-medium">
                         Belum ada riwayat tagihan.
@@ -379,6 +407,27 @@ export default function Dashboard() {
                   )}
                 </tbody>
               </table>
+              {totalInvoicePages > 1 && (
+                <div className="bg-slate-50 border-t border-slate-100 p-4 flex justify-between items-center mt-auto">
+                  <button
+                    disabled={invoicePage === 1}
+                    onClick={() => setInvoicePage((p) => p - 1)}
+                    className="text-xs font-bold text-slate-600 px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-xs font-bold text-slate-400">
+                    Hal {invoicePage} / {totalInvoicePages}
+                  </span>
+                  <button
+                    disabled={invoicePage === totalInvoicePages}
+                    onClick={() => setInvoicePage((p) => p + 1)}
+                    className="text-xs font-bold text-slate-600 px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
