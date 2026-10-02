@@ -29,18 +29,23 @@ client.on('ready', () => {
 // Listener untuk memproses laporan kerusakan dari tenant
 client.on('message_create', async (msg) => {
   // message_create menangkap pesan masuk DARI orang lain DAN pesan KELUAR dari diri kita sendiri.
-  // Berguna jika nomor Bot juga dipakai sebagai nomor sehari-hari/testing.
   const body = msg.body.trim();
   if (body.toUpperCase().startsWith('LAPOR ')) {
     const laporan = body.substring(6).trim();
 
-    // Jika pesan dikirim oleh bot itu sendiri (testing lapor diri sendiri), sender = msg.to
-    // Jika pesan masuk dari orang lain, sender = msg.from
-    const isSelf = msg.from === msg.to || msg.from.includes('me');
-    const rawSender = msg.fromMe ? msg.to : msg.from;
-    const sender = rawSender.replace('@c.us', ''); // Format: 628...
+    // Tarik kontak/pengirim aslinya langsung dari API Message untuk mencegah format @lid
+    const contact = await msg.getContact();
+    const rawSender = contact.number || (msg.fromMe ? msg.to : msg.from);
+    const sender = rawSender.replace('@c.us', '').replace('@lid', ''); // Format: 628...
 
-    console.log('[DEBUG WA] Laporan masuk. rawSender:', rawSender, ' | sender:', sender);
+    console.log(
+      '[DEBUG WA] Laporan masuk. rawSender:',
+      rawSender,
+      ' | sender:',
+      sender,
+      ' | contact.number:',
+      contact.number
+    );
 
     try {
       // Cari penyewa aktif berdasarkan nomor WA
