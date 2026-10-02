@@ -3,7 +3,7 @@ const { Queue } = require('bullmq');
 const multer = require('multer');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
-const { sendWA } = require('../services/wa');
+const { sendWA, sendWAWithQRIS } = require('../services/wa');
 
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
@@ -113,7 +113,7 @@ router.post('/checkout', async (req, res) => {
 
     // 1. Ambil data sewa dan harga kamar
     const { rows } = await client.query(
-      `SELECT rl.room_id, r.monthly_price, rl.status FROM room_leases rl JOIN rooms r ON rl.room_id = r.id WHERE rl.id = $1`,
+      `SELECT rl.room_id, r.room_number, r.monthly_price, rl.status FROM room_leases rl JOIN rooms r ON rl.room_id = r.id WHERE rl.id = $1`,
       [leaseId]
     );
 
@@ -121,7 +121,7 @@ router.post('/checkout', async (req, res) => {
       return res.status(400).json({ error: 'Kontrak tidak ditemukan atau sudah tidak aktif' });
     }
 
-    const { room_id, monthly_price } = rows[0];
+    const { room_id, room_number, monthly_price } = rows[0];
     const checkoutDay = new Date().getDate(); // Tanggal hari ini
 
     // 2. Hitung Prorata (<= 5 hari = 50rb/hari, > 5 hari = Harga Full)
@@ -146,16 +146,13 @@ router.post('/checkout', async (req, res) => {
     if (pendingJob) await pendingJob.remove();
 
     // 6. Kirim Invoice Akhir via WA
-    const message = `Terima kasih telah menyewa di BeresKos.\n\nBerikut adalah tagihan akhir (Prorata/Full) Anda sebelum menyerahkan kunci:\n*Kamar:* ${room_id}\n*Total Tagihan Akhir:* Rp ${finalBill.toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran. Semoga sukses di tempat baru!`;
-    // Kita harus fetch tenant phone dulu, tapi ini MVP jadi kita letakkan lognya saja atau panggil sendWA jika phone tersedia di query.
-    // Karena query di atas tidak fetch phone, kita abaikan pengiriman WA sungguhan untuk checkout di MVP ini demi kecepatan, atau tambah JOIN.
-    // Kita tambahkan JOIN singkat:
+    const message = `Terima kasih telah menyewa di BeresKos.\n\nBerikut adalah tagihan akhir (Prorata/Full) Anda sebelum menyerahkan kunci:\n*Kamar:* ${room_number}\n*Total Tagihan Akhir:* Rp ${finalBill.toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran dengan scan QRIS di atas. Semoga sukses di tempat baru!`;
     const tenantRes = await client.query(
       `SELECT phone_number FROM tenants t JOIN room_leases rl ON rl.tenant_id = t.id WHERE rl.id = $1`,
       [leaseId]
     );
     if (tenantRes.rows[0]) {
-      sendWA(tenantRes.rows[0].phone_number, message);
+      sendWAWithQRIS(tenantRes.rows[0].phone_number, message);
     }
 
     res.json({ success: true, finalBill, message: 'Check-out berhasil. Tagihan bulanan distop.' });

@@ -1,4 +1,4 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
 console.log('[WA] Menginisialisasi Bot WhatsApp...');
@@ -50,4 +50,24 @@ const sendWA = async (phone, message) => {
   }
 };
 
-module.exports = { sendWA };
+const sendWAWithQRIS = async (phone, message) => {
+  if (!isReady) return false;
+  try {
+    let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
+    const chatId = `${formatted}@c.us`;
+
+    // Mengirim Dummy Gambar QR Code
+    const media = await MessageMedia.fromUrl(
+      'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'
+    );
+    await client.sendMessage(chatId, media, { caption: message });
+
+    console.log(`[WA] ✔️ Pesan + QRIS sukses terkirim ke ${phone}`);
+    return true;
+  } catch (err) {
+    console.error(`[WA] ❌ Error kirim QRIS ke ${phone}:`, err.message);
+    return false;
+  }
+};
+
+module.exports = { sendWA, sendWAWithQRIS };

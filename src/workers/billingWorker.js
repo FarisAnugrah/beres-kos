@@ -1,7 +1,7 @@
 const { Worker } = require('bullmq');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
-const { sendWA } = require('../services/wa');
+const { sendWAWithQRIS } = require('../services/wa');
 
 console.log('Worker penagihan aktif, menunggu antrean H-3...');
 
@@ -38,8 +38,8 @@ const worker = new Worker(
       await client.query('COMMIT');
 
       // 3. Kirim pesan tagihan + QRIS ke WA
-      const waMsg = `Halo ${tenant.name},\n\nIni adalah pengingat tagihan bulanan BeresKos untuk Kamar ${tenant.room_number}.\n\nJatuh tempo: Tanggal ${dueDay}\nTotal: *Rp ${totalBilled.toLocaleString('id-ID')}*\n(Sewa Kamar + Kas Dapur Rp20.000)\n\nHarap lakukan pembayaran.\nCek transparansi kas: http://localhost:3001/tenant`;
-      await sendWA(tenant.phone_number, waMsg);
+      const waMsg = `Halo ${tenant.name},\n\nIni adalah pengingat tagihan bulanan BeresKos untuk Kamar ${tenant.room_number}.\n\nJatuh tempo: Tanggal ${dueDay}\nTotal: *Rp ${totalBilled.toLocaleString('id-ID')}*\n(Sewa Kamar + Kas Dapur Rp20.000)\n\nHarap lakukan pembayaran dengan scan QRIS di atas.\nCek transparansi kas: http://localhost:3001/tenant`;
+      await sendWAWithQRIS(tenant.phone_number, waMsg);
 
       // 4. AUTO-CHAINING: Jadwalkan tiket untuk bulan depan
       const nextMonth = new Date();
