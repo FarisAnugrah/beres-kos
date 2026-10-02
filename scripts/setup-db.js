@@ -1,6 +1,9 @@
 const { Pool } = require('pg');
 // Sesuaikan dengan user/pass PostgreSQL lokal Anda
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/bereskos' });
+const pool = new Pool({
+  connectionString:
+    process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/bereskos',
+});
 
 async function run() {
   await pool.query(`
