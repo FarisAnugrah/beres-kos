@@ -4,6 +4,7 @@ const multer = require('multer');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
 const { sendWA, sendWAWithQRIS } = require('../services/wa');
+const { createXenditInvoice } = require('../services/xendit');
 
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
@@ -132,11 +133,15 @@ router.post('/checkout', async (req, res) => {
     await client.query(`UPDATE rooms SET status = 'VACANT' WHERE id = $1`, [room_id]);
 
     // 4. Buat invoice terakhir
+    let invoiceId = null;
+    let paymentLink = 'Hubungi Admin untuk pembayaran tunai/transfer.';
+
     if (finalBill > 0) {
-      await client.query(
-        `INSERT INTO invoices (lease_id, total_amount, status) VALUES ($1, $2, 'UNPAID')`,
+      const invRes = await client.query(
+        `INSERT INTO invoices (lease_id, total_amount, status) VALUES ($1, $2, 'UNPAID') RETURNING id`,
         [leaseId, finalBill]
       );
+      invoiceId = invRes.rows[0].id;
     }
 
     await client.query('COMMIT');
@@ -145,14 +150,21 @@ router.post('/checkout', async (req, res) => {
     const pendingJob = await billingQueue.getJob(leaseId);
     if (pendingJob) await pendingJob.remove();
 
-    // 6. Kirim Invoice Akhir via WA
-    const message = `Terima kasih telah menyewa di BeresKos.\n\nBerikut adalah tagihan akhir (Prorata/Full) Anda sebelum menyerahkan kunci:\n*Kamar:* ${room_number}\n*Total Tagihan Akhir:* Rp ${finalBill.toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran dengan scan QRIS di atas. Semoga sukses di tempat baru!`;
+    // 6. Generate Xendit Link & Kirim Invoice Akhir via WA
     const tenantRes = await client.query(
-      `SELECT phone_number FROM tenants t JOIN room_leases rl ON rl.tenant_id = t.id WHERE rl.id = $1`,
+      `SELECT t.name, t.phone_number FROM tenants t JOIN room_leases rl ON rl.tenant_id = t.id WHERE rl.id = $1`,
       [leaseId]
     );
-    if (tenantRes.rows[0]) {
-      sendWAWithQRIS(tenantRes.rows[0].phone_number, message);
+
+    if (tenantRes.rows[0] && finalBill > 0 && invoiceId) {
+      const tenant = tenantRes.rows[0];
+      const xenditUrl = await createXenditInvoice(invoiceId, finalBill, tenant.name, room_number);
+      if (xenditUrl) paymentLink = xenditUrl;
+
+      const message = `Terima kasih telah menyewa di BeresKos.\n\nBerikut adalah tagihan akhir (Prorata/Full) Anda sebelum menyerahkan kunci:\n*Kamar:* ${room_number}\n*Total Tagihan Akhir:* Rp ${finalBill.toLocaleString('id-ID')}\n\nMohon selesaikan pembayaran melalui link resmi berikut:\n${paymentLink}\n\nSemoga sukses di tempat baru!`;
+
+      // Kirim cukup menggunakan teks biasa (karena Link Xendit otomatis memunculkan thumbnail cantik)
+      sendWA(tenant.phone_number, message);
     }
 
     res.json({ success: true, finalBill, message: 'Check-out berhasil. Tagihan bulanan distop.' });

@@ -1,7 +1,8 @@
 const { Worker } = require('bullmq');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
-const { sendWAWithQRIS } = require('../services/wa');
+const { sendWA } = require('../services/wa');
+const { createXenditInvoice } = require('../services/xendit');
 
 console.log('Worker penagihan aktif, menunggu antrean H-3...');
 
@@ -30,16 +31,26 @@ const worker = new Worker(
       await client.query('BEGIN');
 
       // 2. Generate Invoice Baru
-      await client.query(`INSERT INTO invoices (lease_id, total_amount) VALUES ($1, $2)`, [
-        leaseId,
-        totalBilled,
-      ]);
+      const invRes = await client.query(
+        `INSERT INTO invoices (lease_id, total_amount) VALUES ($1, $2) RETURNING id`,
+        [leaseId, totalBilled]
+      );
+      const invoiceId = invRes.rows[0].id;
 
       await client.query('COMMIT');
 
-      // 3. Kirim pesan tagihan + QRIS ke WA
-      const waMsg = `Halo ${tenant.name},\n\nIni adalah pengingat tagihan bulanan BeresKos untuk Kamar ${tenant.room_number}.\n\nJatuh tempo: Tanggal ${dueDay}\nTotal: *Rp ${totalBilled.toLocaleString('id-ID')}*\n(Sewa Kamar + Kas Dapur Rp20.000)\n\nHarap lakukan pembayaran dengan scan QRIS di atas.\nCek transparansi kas: http://localhost:3001/tenant`;
-      await sendWAWithQRIS(tenant.phone_number, waMsg);
+      // 3. Generate Link Xendit & Kirim pesan tagihan ke WA
+      let paymentLink = 'Hubungi Admin untuk pembayaran tunai/transfer.';
+      const xenditUrl = await createXenditInvoice(
+        invoiceId,
+        totalBilled,
+        tenant.name,
+        tenant.room_number
+      );
+      if (xenditUrl) paymentLink = xenditUrl;
+
+      const waMsg = `Halo ${tenant.name},\n\nIni adalah pengingat tagihan bulanan BeresKos untuk Kamar ${tenant.room_number}.\n\nJatuh tempo: Tanggal ${dueDay}\nTotal: *Rp ${totalBilled.toLocaleString('id-ID')}*\n(Sewa Kamar + Kas Dapur Rp20.000)\n\nHarap lakukan pembayaran via Link Resmi berikut:\n${paymentLink}\n\nCek transparansi kas: http://localhost:3001/tenant`;
+      await sendWA(tenant.phone_number, waMsg);
 
       // 4. AUTO-CHAINING: Jadwalkan tiket untuk bulan depan
       const nextMonth = new Date();
