@@ -13,6 +13,7 @@ router.get('/rooms', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT r.*, rl.id as active_lease_id, t.name as tenant_name,
+             t.phone_number as tenant_phone, t.id_card_url as tenant_ktp,
              rl.start_date, rl.due_day_of_month
       FROM rooms r 
       LEFT JOIN room_leases rl ON r.id = rl.room_id AND rl.status = 'ACTIVE'

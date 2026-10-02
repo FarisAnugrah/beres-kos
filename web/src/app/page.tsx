@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [detailRoom, setDetailRoom] = useState<any>(null);
 
   const loadData = async () => {
     try {
@@ -258,6 +259,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  <button
+                    onClick={() => setDetailRoom(room)}
+                    className="w-full mb-3 bg-slate-50 text-indigo-600 border border-indigo-100 font-bold py-3 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                  >
+                    Detail Penyewa
+                  </button>
                   <button
                     onClick={() => checkOut(room.active_lease_id)}
                     className="w-full bg-white text-rose-600 border border-rose-200 font-bold py-3 rounded-2xl hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm"
