@@ -5,6 +5,7 @@ export default function Dashboard() {
   const [rooms, setRooms] = useState([]);
   const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
   const [invoices, setInvoices] = useState([]);
+  const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
@@ -37,6 +38,9 @@ export default function Dashboard() {
 
       const resI = await fetch('/api/invoices');
       if (resI.ok) setInvoices(await resI.json());
+
+      const resT = await fetch('/api/tickets');
+      if (resT.ok) setTickets(await resT.json());
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,6 +109,12 @@ export default function Dashboard() {
     alert(
       `Status kamar berhasil dikosongkan!\nInvoice terakhir terbit: Rp ${data.finalBill.toLocaleString('id-ID')}\n(Pesan WA otomatis + QRIS telah terkirim)`
     );
+    loadData();
+  };
+
+  const resolveTicket = async (ticketId: string) => {
+    if (!confirm('Tandai laporan kerusakan ini sebagai sudah diperbaiki?')) return;
+    await fetch(`/api/tickets/${ticketId}/resolve`, { method: 'POST' });
     loadData();
   };
 
@@ -557,6 +567,51 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Laporan Kerusakan (Ticketing) */}
+        <div className="mt-12">
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-6">
+            Laporan Kerusakan & Komplain
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tickets.map((t: any) => (
+              <div
+                key={t.id}
+                className={`p-6 rounded-2xl border-2 transition-all shadow-sm ${t.status === 'PENDING' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-60'}`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Kamar {t.room_number}
+                    </span>
+                    <span className="font-bold text-slate-800">{t.tenant_name}</span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full ${t.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}
+                  >
+                    {t.status === 'PENDING' ? 'Perlu Dicek' : 'Selesai'}
+                  </span>
+                </div>
+                <p className="text-slate-700 font-medium mb-6 bg-white p-4 rounded-xl border border-slate-100 italic">
+                  "{t.description}"
+                </p>
+                {t.status === 'PENDING' && (
+                  <button
+                    onClick={() => resolveTicket(t.id)}
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-sm"
+                  >
+                    Tandai Sudah Diperbaiki
+                  </button>
+                )}
+              </div>
+            ))}
+            {tickets.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500 font-medium bg-slate-50 rounded-3xl border border-slate-200">
+                Belum ada laporan kerusakan dari penyewa.
+              </div>
+            )}
           </div>
         </div>
       </main>

@@ -1,6 +1,7 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 const qrcode = require('qrcode');
+const pool = require('../config/db');
 
 console.log('[WA] Menginisialisasi Bot WhatsApp...');
 
@@ -23,6 +24,37 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
   console.log('[WA] Client is ready! Bot WhatsApp berhasil terhubung.');
   isReady = true;
+});
+
+// Listener untuk memproses laporan kerusakan dari tenant
+client.on('message', async (msg) => {
+  const body = msg.body.trim();
+  if (body.toUpperCase().startsWith('LAPOR ')) {
+    const laporan = body.substring(6).trim();
+    const sender = msg.from.replace('@c.us', ''); // Format: 628...
+    
+    try {
+      // Cari penyewa aktif berdasarkan nomor WA (mengabaikan 62 atau 0 di depan)
+      const phoneEnd = sender.substring(2);
+      const { rows } = await pool.query(`
+        SELECT rl.room_id, r.room_number, t.name
+        FROM tenants t
+        JOIN room_leases rl ON rl.tenant_id = t.id
+        JOIN rooms r ON rl.room_id = r.id
+        WHERE rl.status = 'ACTIVE' AND t.phone_number LIKE '%' || $1
+      `, [phoneEnd]);
+
+      if (rows.length > 0) {
+        const { room_id, room_number, name } = rows[0];
+        await pool.query(`INSERT INTO tickets (room_id, tenant_name, description) VALUES ($1, $2, $3)`, [room_id, name, laporan]);
+        msg.reply(`✔️ Laporan kerusakan/keluhan untuk Kamar ${room_number} telah masuk ke sistem Dasbor Admin. Teknisi/Admin akan segera mengecek.`);
+      } else {
+        msg.reply('❌ Maaf, nomor Anda tidak terdeteksi sebagai penyewa aktif di BeresKos. Laporan gagal dikirim.');
+      }
+    } catch (err) {
+      console.error('[WA] Error memproses laporan:', err);
+    }
+  }
 });
 
 client.on('disconnected', (reason) => {

@@ -28,6 +28,31 @@ router.get('/invoices', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Endpoint untuk mengambil tiket laporan kerusakan
+router.get('/tickets', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT t.*, r.room_number 
+      FROM tickets t 
+      JOIN rooms r ON t.room_id = r.id 
+      ORDER BY t.created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint untuk menyelesaikan tiket
+router.post('/tickets/:id/resolve', async (req, res) => {
+  try {
+    await pool.query(`UPDATE tickets SET status = 'RESOLVED' WHERE id = $1`, [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/rooms', async (req, res) => {
   try {
     const { rows } = await pool.query(`
