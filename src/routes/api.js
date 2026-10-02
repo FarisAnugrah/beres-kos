@@ -6,6 +6,22 @@ const redisConn = require('../config/redis');
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
 
+// Endpoint list kamar + status kontrak aktif
+router.get('/rooms', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT r.*, rl.id as active_lease_id, t.name as tenant_name 
+      FROM rooms r 
+      LEFT JOIN room_leases rl ON r.id = rl.room_id AND rl.status = 'ACTIVE'
+      LEFT JOIN tenants t ON rl.tenant_id = t.id
+      ORDER BY r.room_number ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/checkin', async (req, res) => {
   const { roomId, name, phone, dueDay, startDate } = req.body;
   const client = await pool.connect();

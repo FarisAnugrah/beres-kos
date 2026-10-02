@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin BeresKos</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .card { padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; }
+    .VACANT { background: #d4edda; border-color: #c3e6cb; }
+    .OCCUPIED { background: #f8d7da; border-color: #f5c6cb; }
+    button { padding: 5px 10px; cursor: pointer; margin-top: 10px; }
+    .ledger { background: #e2e3e5; padding: 15px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <h1>Visual Grid Kamar Kos</h1>
+  <div class="grid" id="roomGrid">Loading...</div>
+
+  <h2>Kas Dapur Bersama (Galon/Gas)</h2>
+  <div class="ledger">
+    <h3>Saldo Aktif: Rp <span id="poolBalance">0</span></h3>
+    <ul id="txList"></ul>
+  </div>
+
+  <script>
+    async function loadData() {
+      // Load Rooms
+      const r = await fetch('/api/rooms');
+      const rooms = await r.json();
+      document.getElementById('roomGrid').innerHTML = rooms.map(room => `
+        <div class="card ${room.status}">
+          <h3>${room.room_number}</h3>
+          <p>${room.status === 'VACANT' ? 'Kosong' : room.tenant_name}</p>
+          ${room.status === 'VACANT' 
+            ? `<button onclick="checkIn('${room.id}')">Check-In</button>`
+            : `<button onclick="checkOut('${room.active_lease_id}')">Check-Out</button>`
+          }
+        </div>
+      `).join('');
+
+      // Load Ledger
+      const l = await fetch('/api/utilities/ledger');
+      const ledger = await l.json();
+      document.getElementById('poolBalance').innerText = ledger.balance.toLocaleString('id-ID');
+      document.getElementById('txList').innerHTML = ledger.transactions.map(tx => `
+        <li>${tx.type === 'INFLOW' ? '+' : '-'} Rp ${tx.amount} (${tx.notes})</li>
+      `).join('');
+    }
+
+    async function checkIn(roomId) {
+      const name = prompt('Nama Penyewa:');
+      if (!name) return;
+      const phone = prompt('Nomor WA (contoh: 6281...):');
+      const dueDay = prompt('Tanggal Penagihan Bulanan (1-31):');
+      
+      await fetch('/api/checkin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, name, phone, dueDay: parseInt(dueDay), startDate: new Date().toISOString() })
+      });
+      loadData();
+    }
+
+    async function checkOut(leaseId) {
+      if (!confirm('Yakin ingin Check-out? Sistem akan menghitung sisa tagihan prorata.')) return;
+      
+      const res = await fetch('/api/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leaseId })
+      });
+      const data = await res.json();
+      alert(`Check-out berhasil. Tagihan akhir: Rp ${data.finalBill}`);
+      loadData();
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
