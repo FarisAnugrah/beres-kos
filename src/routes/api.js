@@ -10,7 +10,24 @@ const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
 const upload = multer({ dest: 'uploads/' });
 
-// Endpoint list kamar + status kontrak aktif
+// Endpoint untuk mengambil riwayat 50 tagihan terakhir
+router.get('/invoices', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT i.id, i.total_amount, i.status, i.created_at, 
+             r.room_number, t.name as tenant_name
+      FROM invoices i
+      JOIN room_leases rl ON i.lease_id = rl.id
+      JOIN rooms r ON rl.room_id = r.id
+      JOIN tenants t ON rl.tenant_id = t.id
+      ORDER BY i.created_at DESC
+      LIMIT 50
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/rooms', async (req, res) => {
   try {
     const { rows } = await pool.query(`

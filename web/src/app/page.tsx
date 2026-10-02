@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 export default function Dashboard() {
   const [rooms, setRooms] = useState([]);
   const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
@@ -18,8 +19,12 @@ export default function Dashboard() {
     try {
       const resR = await fetch('/api/rooms');
       if (resR.ok) setRooms(await resR.json());
+
       const resL = await fetch('/api/utilities/ledger');
       if (resL.ok) setLedger(await resL.json());
+
+      const resI = await fetch('/api/invoices');
+      if (resI.ok) setInvoices(await resI.json());
     } catch (err) {
       console.error(err);
     } finally {
@@ -314,43 +319,101 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Ledger Recent Transactions */}
-        <div className="mt-12">
-          <h3 className="text-xl font-bold text-slate-800 mb-6">Riwayat Kas Dapur Terakhir</h3>
-          <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="py-4 px-6 font-bold text-slate-500">Keterangan</th>
-                  <th className="py-4 px-6 font-bold text-slate-500">Tanggal</th>
-                  <th className="py-4 px-6 font-bold text-slate-500 text-right">Nominal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {ledger.transactions.slice(0, 5).map((tx: any) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6 font-medium text-slate-700">{tx.notes}</td>
-                    <td className="py-4 px-6 text-slate-500">
-                      {new Date(tx.created_at).toLocaleDateString('id-ID')}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <span
-                        className={`font-bold inline-flex items-center gap-1 ${tx.type === 'INFLOW' ? 'text-emerald-600' : 'text-rose-600'}`}
-                      >
-                        {tx.type === 'INFLOW' ? '+' : '-'} Rp {tx.amount.toLocaleString('id-ID')}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {ledger.transactions.length === 0 && (
+        {/* Invoice History & Ledger Wrapper */}
+        <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Invoice History */}
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">Riwayat Tagihan Sewa</h3>
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-slate-400 font-medium">
-                      Belum ada transaksi.
-                    </td>
+                    <th className="py-4 px-6 font-bold text-slate-500">Penghuni / Kamar</th>
+                    <th className="py-4 px-6 font-bold text-slate-500 text-center">Status</th>
+                    <th className="py-4 px-6 font-bold text-slate-500 text-right">Nominal</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {invoices.slice(0, 10).map((inv: any) => (
+                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="font-bold text-slate-800">{inv.tenant_name}</div>
+                        <div className="text-xs text-slate-500 font-medium mt-0.5">
+                          Kamar {inv.room_number} •{' '}
+                          {new Date(inv.created_at).toLocaleDateString('id-ID')}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span
+                          className={`px-3 py-1 text-xs font-bold rounded-full ${
+                            inv.status === 'PAID'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {inv.status === 'PAID' ? 'LUNAS' : 'BELUM BAYAR'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right font-black text-slate-700">
+                        Rp {Number(inv.total_amount).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))}
+                  {invoices.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400 font-medium">
+                        Belum ada riwayat tagihan.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Ledger Recent Transactions */}
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">Riwayat Kas Dapur Terakhir</h3>
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="py-4 px-6 font-bold text-slate-500">Keterangan</th>
+                    <th className="py-4 px-6 font-bold text-slate-500">Tanggal</th>
+                    <th className="py-4 px-6 font-bold text-slate-500 text-right">Nominal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {ledger.transactions.slice(0, 10).map((tx: any) => (
+                    <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td
+                        className="py-4 px-6 font-medium text-slate-700 max-w-[150px] truncate"
+                        title={tx.notes}
+                      >
+                        {tx.notes}
+                      </td>
+                      <td className="py-4 px-6 text-slate-500">
+                        {new Date(tx.created_at).toLocaleDateString('id-ID')}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <span
+                          className={`font-bold inline-flex items-center gap-1 ${tx.type === 'INFLOW' ? 'text-emerald-600' : 'text-rose-600'}`}
+                        >
+                          {tx.type === 'INFLOW' ? '+' : '-'} Rp {tx.amount.toLocaleString('id-ID')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {ledger.transactions.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400 font-medium">
+                        Belum ada transaksi.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </main>
