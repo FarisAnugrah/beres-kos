@@ -20,6 +20,12 @@ export default function Dashboard() {
   const [invoiceFilterDate, setInvoiceFilterDate] = useState('');
   const INVOICE_PER_PAGE = 5;
 
+  // Pagination & Filter untuk Kas Dapur
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerStart, setLedgerStart] = useState('');
+  const [ledgerEnd, setLedgerEnd] = useState('');
+  const LEDGER_PER_PAGE = 5;
+
   const loadData = async () => {
     try {
       const resR = await fetch('/api/rooms');
@@ -126,6 +132,20 @@ export default function Dashboard() {
   const displayedInvoices = filteredInvoices.slice(
     (invoicePage - 1) * INVOICE_PER_PAGE,
     invoicePage * INVOICE_PER_PAGE
+  );
+
+  const filteredLedger = ledger.transactions.filter((tx: any) => {
+    if (!ledgerStart && !ledgerEnd) return true;
+    const txDate = new Date(tx.created_at).toISOString().split('T')[0];
+    if (ledgerStart && txDate < ledgerStart) return false;
+    if (ledgerEnd && txDate > ledgerEnd) return false;
+    return true;
+  });
+
+  const totalLedgerPages = Math.ceil(filteredLedger.length / LEDGER_PER_PAGE);
+  const displayedLedger = filteredLedger.slice(
+    (ledgerPage - 1) * LEDGER_PER_PAGE,
+    ledgerPage * LEDGER_PER_PAGE
   );
 
   return (
@@ -433,8 +453,33 @@ export default function Dashboard() {
 
           {/* Ledger Recent Transactions */}
           <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-6">Riwayat Kas Dapur Terakhir</h3>
-            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden">
+            <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center mb-6 gap-3">
+              <h3 className="text-xl font-bold text-slate-800">Riwayat Kas Dapur</h3>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={ledgerStart}
+                  onChange={(e) => {
+                    setLedgerStart(e.target.value);
+                    setLedgerPage(1);
+                  }}
+                  className="w-full text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:border-indigo-500 outline-none"
+                  title="Dari Tanggal"
+                />
+                <span className="text-slate-400 font-bold self-center">-</span>
+                <input
+                  type="date"
+                  value={ledgerEnd}
+                  onChange={(e) => {
+                    setLedgerEnd(e.target.value);
+                    setLedgerPage(1);
+                  }}
+                  className="w-full text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:border-indigo-500 outline-none"
+                  title="Sampai Tanggal"
+                />
+              </div>
+            </div>
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden flex flex-col h-full max-h-[500px]">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -444,7 +489,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {ledger.transactions.slice(0, 10).map((tx: any) => (
+                  {displayedLedger.map((tx: any) => (
                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                       <td
                         className="py-4 px-6 font-medium text-slate-700 max-w-[150px] truncate"
@@ -464,7 +509,7 @@ export default function Dashboard() {
                       </td>
                     </tr>
                   ))}
-                  {ledger.transactions.length === 0 && (
+                  {filteredLedger.length === 0 && (
                     <tr>
                       <td colSpan={3} className="py-8 text-center text-slate-400 font-medium">
                         Belum ada transaksi.
@@ -473,6 +518,27 @@ export default function Dashboard() {
                   )}
                 </tbody>
               </table>
+              {totalLedgerPages > 1 && (
+                <div className="bg-slate-50 border-t border-slate-100 p-4 flex justify-between items-center mt-auto">
+                  <button
+                    disabled={ledgerPage === 1}
+                    onClick={() => setLedgerPage((p) => p - 1)}
+                    className="text-xs font-bold text-slate-600 px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-xs font-bold text-slate-400">
+                    Hal {ledgerPage} / {totalLedgerPages}
+                  </span>
+                  <button
+                    disabled={ledgerPage === totalLedgerPages}
+                    onClick={() => setLedgerPage((p) => p + 1)}
+                    className="text-xs font-bold text-slate-600 px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
