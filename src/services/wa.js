@@ -57,14 +57,15 @@ const sendWAWithQRIS = async (phone, message) => {
     let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
     const chatId = `${formatted}@c.us`;
 
-    // Generate QR Code secara lokal dalam format Base64 agar tidak ada error MIME type
-    const qrDataUrl = await qrcode.toDataURL('DUMMY_QRIS_PAYMENT_BERESKOS', { width: 300 });
-    const base64Data = qrDataUrl.split(',')[1];
+    // Karena API WhatsApp Web internal sedang mengalami bug dengan attachment media (Error id property),
+    // kita sisipkan link QRIS langsung ke dalam teks agar WhatsApp memunculkan thumbnail preview secara otomatis.
+    const qrisLink =
+      'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=DUMMY_QRIS_PAYMENT_BERESKOS';
+    const finalMessage = `${message}\n\n*Link QRIS Pembayaran:*\n${qrisLink}`;
 
-    const media = new MessageMedia('image/png', base64Data, 'qris.png');
-    await client.sendMessage(chatId, media, { caption: message });
+    await client.sendMessage(chatId, finalMessage);
 
-    console.log(`[WA] ✔️ Pesan + QRIS sukses terkirim ke ${phone}`);
+    console.log(`[WA] ✔️ Pesan + Link QRIS sukses terkirim ke ${phone}`);
     return true;
   } catch (err) {
     console.error(`[WA] ❌ Error kirim QRIS ke ${phone}:`, err.message);
