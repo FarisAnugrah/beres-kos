@@ -17,7 +17,8 @@ export default function Dashboard() {
 
   // Pagination & Filter untuk Tagihan
   const [invoicePage, setInvoicePage] = useState(1);
-  const [invoiceFilterDate, setInvoiceFilterDate] = useState('');
+  const [invoiceStart, setInvoiceStart] = useState('');
+  const [invoiceEnd, setInvoiceEnd] = useState('');
   const INVOICE_PER_PAGE = 5;
 
   // Pagination & Filter untuk Kas Dapur
@@ -123,9 +124,11 @@ export default function Dashboard() {
   });
 
   const filteredInvoices = invoices.filter((inv: any) => {
-    if (!invoiceFilterDate) return true;
+    if (!invoiceStart && !invoiceEnd) return true;
     const invDate = new Date(inv.created_at).toISOString().split('T')[0];
-    return invDate === invoiceFilterDate;
+    if (invoiceStart && invDate < invoiceStart) return false;
+    if (invoiceEnd && invDate > invoiceEnd) return false;
+    return true;
   });
 
   const totalInvoicePages = Math.ceil(filteredInvoices.length / INVOICE_PER_PAGE);
@@ -373,17 +376,31 @@ export default function Dashboard() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800">Riwayat Tagihan Sewa</h3>
-              <input
-                type="date"
-                value={invoiceFilterDate}
-                onChange={(e) => {
-                  setInvoiceFilterDate(e.target.value);
-                  setInvoicePage(1);
-                }}
-                className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={invoiceStart}
+                  onChange={(e) => {
+                    setInvoiceStart(e.target.value);
+                    setInvoicePage(1);
+                  }}
+                  className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none w-36"
+                  title="Dari Tanggal"
+                />
+                <span className="text-slate-400 font-bold self-center">-</span>
+                <input
+                  type="date"
+                  value={invoiceEnd}
+                  onChange={(e) => {
+                    setInvoiceEnd(e.target.value);
+                    setInvoicePage(1);
+                  }}
+                  className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none w-36"
+                  title="Sampai Tanggal"
+                />
+              </div>
             </div>
-            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden flex flex-col h-full max-h-[500px]">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
