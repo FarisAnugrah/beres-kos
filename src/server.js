@@ -1,10 +1,14 @@
 const express = require('express');
+const path = require('path');
 const apiRoutes = require('./routes/api');
 const webhookRoutes = require('./routes/webhooks');
 const utilityRoutes = require('./routes/utilities');
 
 const app = express();
 app.use(express.json());
+
+// Serve folder public (UI Frontend)
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/api', apiRoutes);
 app.use('/api/webhooks', webhookRoutes);
