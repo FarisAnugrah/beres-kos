@@ -3,12 +3,17 @@ const pool = require('../config/db');
 const router = express.Router();
 
 router.post('/payment', async (req, res) => {
+  console.log('[WEBHOOK] Menerima notifikasi pembayaran:', req.body);
+
   // Support payload dari Frontend (Dummy) ATAU Xendit (Real)
   const invoiceId = req.body.invoiceId || req.body.external_id;
   const status = req.body.status || 'PAID'; // Xendit mengirim status 'PAID' atau 'SETTLED'
 
   if (!invoiceId) return res.status(400).json({ error: 'Missing invoiceId / external_id' });
-  if (status !== 'PAID' && status !== 'SETTLED') return res.json({ success: true, ignored: true });
+  if (status !== 'PAID' && status !== 'SETTLED') {
+    console.log('[WEBHOOK] Diabaikan karena status bukan PAID/SETTLED:', status);
+    return res.json({ success: true, ignored: true });
+  }
 
   const client = await pool.connect();
 
