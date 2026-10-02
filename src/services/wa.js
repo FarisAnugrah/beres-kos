@@ -49,7 +49,7 @@ client.on('message', async (msg) => {
         JOIN rooms r ON rl.room_id = r.id
         WHERE rl.status = 'ACTIVE' 
           AND REGEXP_REPLACE(t.phone_number, '\\D', '', 'g') LIKE '%' || $1
-        ORDER BY rl.created_at DESC
+        ORDER BY rl.id DESC
         LIMIT 1
       `,
         [phoneSuffix]
