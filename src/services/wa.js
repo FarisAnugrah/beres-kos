@@ -40,6 +40,8 @@ client.on('message_create', async (msg) => {
     const rawSender = msg.fromMe ? msg.to : msg.from;
     const sender = rawSender.replace('@c.us', ''); // Format: 628...
 
+    console.log('[DEBUG WA] Laporan masuk. rawSender:', rawSender, ' | sender:', sender);
+
     try {
       // Cari penyewa aktif berdasarkan nomor WA
       // Karena input Admin mungkin bervariasi (0812.., 6281.., +6281..), dan sender WA selalu '6281...'
@@ -47,6 +49,8 @@ client.on('message_create', async (msg) => {
       const cleanSender = sender.replace(/\D/g, '');
       const phoneSuffix =
         cleanSender.length > 9 ? cleanSender.substring(cleanSender.length - 9) : cleanSender;
+
+      console.log('[DEBUG WA] cleanSender:', cleanSender, ' | phoneSuffix:', phoneSuffix);
 
       const { rows } = await pool.query(
         `
@@ -61,6 +65,8 @@ client.on('message_create', async (msg) => {
       `,
         [phoneSuffix]
       );
+
+      console.log('[DEBUG WA] DB Result:', rows);
 
       if (rows.length > 0) {
         const { room_id, room_number, name } = rows[0];
