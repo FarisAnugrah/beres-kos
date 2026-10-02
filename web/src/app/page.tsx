@@ -455,17 +455,61 @@ export default function Dashboard() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-2">
-                  Tipe & Harga Sewa Bulanan
+                  Pilih Tipe & Harga Sewa
                 </label>
-                <select
-                  required
-                  name="monthlyPrice"
-                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 text-lg bg-white appearance-none"
-                >
-                  <option value="1200000">Tipe Standar (Kipas) - Rp 1.200.000</option>
-                  <option value="1500000">Tipe Menengah (AC) - Rp 1.500.000</option>
-                  <option value="2000000">Tipe VIP (Kamar Mandi Dalam) - Rp 2.000.000</option>
-                </select>
+                <div className="space-y-3">
+                  <label className="block cursor-pointer">
+                    <input
+                      type="radio"
+                      name="monthlyPrice"
+                      value="1200000"
+                      className="peer sr-only"
+                      required
+                      defaultChecked
+                    />
+                    <div className="p-4 rounded-2xl border-2 border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 hover:bg-slate-50 transition-all flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-slate-800">Tipe Standar (Kipas)</div>
+                        <div className="text-sm text-slate-500 font-medium">Fasilitas Dasar</div>
+                      </div>
+                      <div className="font-black text-indigo-600">Rp 1.2jt</div>
+                    </div>
+                  </label>
+                  <label className="block cursor-pointer">
+                    <input
+                      type="radio"
+                      name="monthlyPrice"
+                      value="1500000"
+                      className="peer sr-only"
+                      required
+                    />
+                    <div className="p-4 rounded-2xl border-2 border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 hover:bg-slate-50 transition-all flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-slate-800">Tipe Menengah (AC)</div>
+                        <div className="text-sm text-slate-500 font-medium">AC + Lemari</div>
+                      </div>
+                      <div className="font-black text-indigo-600">Rp 1.5jt</div>
+                    </div>
+                  </label>
+                  <label className="block cursor-pointer">
+                    <input
+                      type="radio"
+                      name="monthlyPrice"
+                      value="2000000"
+                      className="peer sr-only"
+                      required
+                    />
+                    <div className="p-4 rounded-2xl border-2 border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 hover:bg-slate-50 transition-all flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-slate-800">Tipe VIP</div>
+                        <div className="text-sm text-slate-500 font-medium">
+                          Kamar Mandi Dalam + AC
+                        </div>
+                      </div>
+                      <div className="font-black text-indigo-600">Rp 2.0jt</div>
+                    </div>
+                  </label>
+                </div>
               </div>
               <div className="flex gap-4 pt-4">
                 <button
