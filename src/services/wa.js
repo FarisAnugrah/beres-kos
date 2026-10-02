@@ -36,10 +36,10 @@ client.on('message', async (msg) => {
     try {
       // Cari penyewa aktif berdasarkan nomor WA
       // Karena input Admin mungkin bervariasi (0812.., 6281.., +6281..), dan sender WA selalu '6281...'
-      // Kita normalisasi dengan membuang angka non-digit dan mengambil 8-10 digit terakhir saja.
+      // Kita membuang angka non-digit dan mengekstrak nomor HP aslinya saja.
       const cleanSender = sender.replace(/\D/g, '');
       const phoneSuffix =
-        cleanSender.length > 8 ? cleanSender.substring(cleanSender.length - 8) : cleanSender;
+        cleanSender.length > 9 ? cleanSender.substring(cleanSender.length - 9) : cleanSender;
 
       const { rows } = await pool.query(
         `
