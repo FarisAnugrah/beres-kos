@@ -249,9 +249,20 @@ export default function Dashboard() {
               className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all flex flex-col group"
             >
               <div className="flex justify-between items-start mb-6">
-                <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
-                  {room.room_number}
-                </h3>
+                <div>
+                  <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
+                    {room.room_number}
+                  </h3>
+                  <p className="text-sm font-bold text-slate-500 mt-1">
+                    {Number(room.monthly_price) === 1200000
+                      ? 'Standar (Kipas)'
+                      : Number(room.monthly_price) === 1500000
+                        ? 'Menengah (AC)'
+                        : Number(room.monthly_price) === 2000000
+                          ? 'VIP (KM Dalam)'
+                          : 'Tipe Custom'}
+                  </p>
+                </div>
                 <span
                   className={`px-3 py-1 text-xs font-bold rounded-full ${
                     room.status === 'VACANT'
