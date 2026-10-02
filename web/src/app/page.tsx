@@ -635,6 +635,79 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Check-Out Preview Modal */}
+      {checkOutRoom && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <h2 className="text-2xl font-black mb-6 text-slate-800 tracking-tight">
+              Terbitkan Invoice Akhir
+            </h2>
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-sm text-slate-500 mb-1 font-medium">Penghuni Keluar</p>
+                <p className="font-bold text-slate-800 text-lg">
+                  {checkOutRoom.tenant_name}{' '}
+                  <span className="text-slate-400 font-medium text-sm">
+                    (Kamar {checkOutRoom.room_number})
+                  </span>
+                </p>
+              </div>
+
+              {(() => {
+                const today = new Date().getDate();
+                const price = Number(checkOutRoom.monthly_price);
+                const isProrate = today <= 5;
+                const finalBill = isProrate ? today * 50000 : price;
+
+                return (
+                  <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100">
+                    <p className="text-sm text-rose-600 font-bold mb-4 uppercase tracking-wider">
+                      Rincian Prorata Otomatis
+                    </p>
+                    <div className="flex justify-between items-center mb-2 text-sm text-slate-700">
+                      <span className="font-medium">Tgl Keluar Hari Ini:</span>
+                      <span className="font-bold">Tanggal {today}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-4 text-sm text-slate-700">
+                      <span className="font-medium">Skema Denda:</span>
+                      <span className="font-bold">
+                        {isProrate
+                          ? `Prorata (Rp 50rb x ${today} hari)`
+                          : 'Sewa 1 Bulan Penuh (> Tgl 5)'}
+                      </span>
+                    </div>
+                    <div className="pt-4 border-t border-rose-200 flex justify-between items-center">
+                      <span className="font-black text-rose-800">Total Ditagih</span>
+                      <span className="font-black text-2xl text-rose-600">
+                        Rp {finalBill.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setCheckOutRoom(null)}
+                className="flex-1 py-4 font-bold text-slate-500 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleConfirmCheckOut(checkOutRoom.active_lease_id)}
+                className="flex-1 py-3 font-bold text-white bg-rose-600 rounded-2xl hover:bg-rose-700 shadow-lg shadow-rose-600/30 transition-all flex flex-col items-center justify-center leading-tight"
+              >
+                <span>Konfirmasi Checkout</span>
+                <span className="text-xs font-medium text-rose-200 mt-0.5">
+                  & Terbitkan Invoice WA
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
