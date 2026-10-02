@@ -32,24 +32,40 @@ client.on('message', async (msg) => {
   if (body.toUpperCase().startsWith('LAPOR ')) {
     const laporan = body.substring(6).trim();
     const sender = msg.from.replace('@c.us', ''); // Format: 628...
-    
+
     try {
-      // Cari penyewa aktif berdasarkan nomor WA (mengabaikan 62 atau 0 di depan)
-      const phoneEnd = sender.substring(2);
-      const { rows } = await pool.query(`
-        SELECT rl.room_id, r.room_number, t.name
+      // Cari penyewa aktif berdasarkan nomor WA
+      // Karena input Admin mungkin bervariasi (0812.., 6281.., +6281..), dan sender WA selalu '6281...'
+      // Kita normalisasi dengan membuang angka non-digit dan mengambil 8-10 digit terakhir saja.
+      const cleanSender = sender.replace(/\D/g, '');
+      const phoneSuffix =
+        cleanSender.length > 8 ? cleanSender.substring(cleanSender.length - 8) : cleanSender;
+
+      const { rows } = await pool.query(
+        `
+        SELECT rl.room_id, r.room_number, t.name, t.phone_number
         FROM tenants t
         JOIN room_leases rl ON rl.tenant_id = t.id
         JOIN rooms r ON rl.room_id = r.id
-        WHERE rl.status = 'ACTIVE' AND t.phone_number LIKE '%' || $1
-      `, [phoneEnd]);
+        WHERE rl.status = 'ACTIVE' 
+          AND REGEXP_REPLACE(t.phone_number, '\\D', '', 'g') LIKE '%' || $1
+      `,
+        [phoneSuffix]
+      );
 
       if (rows.length > 0) {
         const { room_id, room_number, name } = rows[0];
-        await pool.query(`INSERT INTO tickets (room_id, tenant_name, description) VALUES ($1, $2, $3)`, [room_id, name, laporan]);
-        msg.reply(`✔️ Laporan kerusakan/keluhan untuk Kamar ${room_number} telah masuk ke sistem Dasbor Admin. Teknisi/Admin akan segera mengecek.`);
+        await pool.query(
+          `INSERT INTO tickets (room_id, tenant_name, description) VALUES ($1, $2, $3)`,
+          [room_id, name, laporan]
+        );
+        msg.reply(
+          `✔️ Laporan kerusakan/keluhan untuk Kamar ${room_number} telah masuk ke sistem Dasbor Admin. Teknisi/Admin akan segera mengecek.`
+        );
       } else {
-        msg.reply('❌ Maaf, nomor Anda tidak terdeteksi sebagai penyewa aktif di BeresKos. Laporan gagal dikirim.');
+        msg.reply(
+          '❌ Maaf, nomor Anda tidak terdeteksi sebagai penyewa aktif di BeresKos. Laporan gagal dikirim.'
+        );
       }
     } catch (err) {
       console.error('[WA] Error memproses laporan:', err);
