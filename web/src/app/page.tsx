@@ -453,7 +453,7 @@ export default function Dashboard() {
 
           {/* Ledger Recent Transactions */}
           <div>
-            <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center mb-6 gap-3">
+            <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800">Riwayat Kas Dapur</h3>
               <div className="flex gap-2">
                 <input
@@ -463,7 +463,7 @@ export default function Dashboard() {
                     setLedgerStart(e.target.value);
                     setLedgerPage(1);
                   }}
-                  className="w-full text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:border-indigo-500 outline-none"
+                  className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none w-36"
                   title="Dari Tanggal"
                 />
                 <span className="text-slate-400 font-bold self-center">-</span>
@@ -474,7 +474,7 @@ export default function Dashboard() {
                     setLedgerEnd(e.target.value);
                     setLedgerPage(1);
                   }}
-                  className="w-full text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:border-indigo-500 outline-none"
+                  className="text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none w-36"
                   title="Sampai Tanggal"
                 />
               </div>
