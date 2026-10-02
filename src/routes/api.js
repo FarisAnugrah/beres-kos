@@ -44,6 +44,21 @@ router.post('/checkin', upload.single('ktp'), async (req, res) => {
     );
     const leaseId = leaseRes.rows[0].id;
 
+    // Ambil harga kamar untuk tagihan bulan pertama
+    const roomRes = await client.query(`SELECT monthly_price FROM rooms WHERE id = $1`, [roomId]);
+    const monthlyPrice = roomRes.rows[0].monthly_price;
+    const totalFirstMonth = parseFloat(monthlyPrice) + 20000; // Sewa + Kas Galon
+
+    // Terbitkan invoice lunas untuk bulan pertama & kreditkan saldo dapur
+    await client.query(
+      `INSERT INTO invoices (lease_id, total_amount, status) VALUES ($1, $2, 'PAID')`,
+      [leaseId, totalFirstMonth]
+    );
+    await client.query(`UPDATE shared_utility_pools SET balance = balance + 20000`);
+    await client.query(
+      `INSERT INTO utility_transactions (type, amount, notes) VALUES ('INFLOW', 20000, 'Iuran perdana dari Check-In penyewa baru')`
+    );
+
     await client.query(`UPDATE rooms SET status = 'OCCUPIED' WHERE id = $1`, [roomId]);
 
     await client.query('COMMIT');
@@ -53,6 +68,9 @@ router.post('/checkin', upload.single('ktp'), async (req, res) => {
     const delayMs = Math.max(0, targetDate.getTime() - Date.now());
 
     await billingQueue.add('monthly-bill', { leaseId, dueDay }, { delay: delayMs, jobId: leaseId });
+
+    // Dummy WA Gateway trigger
+    console.log(`[WA] Mengirim pesan selamat datang & link ledger galon ke ${phone}`);
 
     res.json({ success: true, leaseId });
   } catch (err) {
