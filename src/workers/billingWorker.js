@@ -1,10 +1,13 @@
-const { Worker } = require('bullmq');
+const { Worker, Queue } = require('bullmq');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
 const { sendWA } = require('../services/wa');
 const { createXenditInvoice } = require('../services/xendit');
 
 console.log('Worker penagihan aktif, menunggu antrean H-3...');
+
+// Inisialisasi ulang queue di dalam worker untuk auto-chaining
+const billingQueue = new Queue('billing', { connection: redisConn });
 
 const worker = new Worker(
   'billing',
@@ -57,7 +60,7 @@ const worker = new Worker(
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       nextMonth.setDate(dueDay - 3);
 
-      await job.queue.add(
+      await billingQueue.add(
         'monthly-bill',
         { leaseId, dueDay },
         { delay: Math.max(0, nextMonth.getTime() - Date.now()), jobId: leaseId }
