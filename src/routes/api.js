@@ -1,10 +1,12 @@
 const express = require('express');
 const { Queue } = require('bullmq');
+const multer = require('multer');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
 
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
+const upload = multer({ dest: 'uploads/' });
 
 // Endpoint list kamar + status kontrak aktif
 router.get('/rooms', async (req, res) => {
@@ -22,16 +24,17 @@ router.get('/rooms', async (req, res) => {
   }
 });
 
-router.post('/checkin', async (req, res) => {
+router.post('/checkin', upload.single('ktp'), async (req, res) => {
   const { roomId, name, phone, dueDay, startDate } = req.body;
+  const ktpUrl = req.file ? `/uploads/${req.file.filename}` : null;
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
     const tenantRes = await client.query(
-      `INSERT INTO tenants (name, phone_number) VALUES ($1, $2) RETURNING id`,
-      [name, phone]
+      `INSERT INTO tenants (name, phone_number, id_card_url) VALUES ($1, $2, $3) RETURNING id`,
+      [name, phone, ktpUrl]
     );
     const tenantId = tenantRes.rows[0].id;
 

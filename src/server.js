@@ -9,6 +9,7 @@ app.use(express.json());
 
 // Serve folder public (UI Frontend)
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', apiRoutes);
 app.use('/api/webhooks', webhookRoutes);
