@@ -455,16 +455,17 @@ export default function Dashboard() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-2">
-                  Harga Sewa Bulanan (Rp)
+                  Tipe & Harga Sewa Bulanan
                 </label>
-                <input
+                <select
                   required
-                  type="number"
-                  min="1"
                   name="monthlyPrice"
-                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 text-xl"
-                  placeholder="1500000"
-                />
+                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 text-lg bg-white appearance-none"
+                >
+                  <option value="1200000">Tipe Standar (Kipas) - Rp 1.200.000</option>
+                  <option value="1500000">Tipe Menengah (AC) - Rp 1.500.000</option>
+                  <option value="2000000">Tipe VIP (Kamar Mandi Dalam) - Rp 2.000.000</option>
+                </select>
               </div>
               <div className="flex gap-4 pt-4">
                 <button
