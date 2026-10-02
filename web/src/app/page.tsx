@@ -537,6 +537,67 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Tenant Detail Modal */}
+      {detailRoom && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <h2 className="text-2xl font-black mb-6 text-slate-800 tracking-tight">
+              Info Penghuni Kamar {detailRoom.room_number}
+            </h2>
+            <div className="space-y-5 mb-8">
+              <div>
+                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">
+                  Nama Lengkap
+                </span>
+                <span className="font-black text-xl text-slate-800">{detailRoom.tenant_name}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">
+                  WhatsApp
+                </span>
+                <a
+                  href={`https://wa.me/${detailRoom.tenant_phone}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-black text-lg text-indigo-600 hover:underline"
+                >
+                  {detailRoom.tenant_phone || '-'}
+                </a>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-2">
+                  Dokumen KTP
+                </span>
+                {detailRoom.tenant_ktp ? (
+                  <a
+                    href={detailRoom.tenant_ktp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block group"
+                  >
+                    <img
+                      src={detailRoom.tenant_ktp}
+                      alt="KTP"
+                      className="w-full h-48 object-cover rounded-2xl border-2 border-slate-200 group-hover:border-indigo-400 transition-colors shadow-sm"
+                    />
+                  </a>
+                ) : (
+                  <div className="w-full h-32 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 text-sm font-medium border-2 border-dashed border-slate-200">
+                    Tidak ada KTP terlampir
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setDetailRoom(null)}
+              className="w-full py-4 font-bold text-slate-600 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"
+            >
+              Tutup Jendela
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
