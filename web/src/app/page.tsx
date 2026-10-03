@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { logoutAction } from './actions';
 
 export default function Dashboard() {
   const [rooms, setRooms] = useState([]);
@@ -27,6 +29,9 @@ export default function Dashboard() {
   const [ledgerStart, setLedgerStart] = useState('');
   const [ledgerEnd, setLedgerEnd] = useState('');
   const LEDGER_PER_PAGE = 5;
+
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const router = useRouter();
 
   const loadData = async () => {
     try {
@@ -107,9 +112,28 @@ export default function Dashboard() {
     const data = await res.json();
     setCheckOutRoom(null);
     alert(
-      `Status kamar berhasil dikosongkan!\nInvoice terakhir terbit: Rp ${data.finalBill.toLocaleString('id-ID')}\n(Pesan WA otomatis + QRIS telah terkirim)`
+      `Status kamar berhasil dikosongkan!\nInvoice terakhir terbit: Rp ${data.finalBill.toLocaleString('id-ID')}\n(Pesan WA otomatis + Link Xendit telah terkirim)`
     );
     loadData();
+  };
+
+  const handleBroadcastSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const res = await fetch('/api/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: formData.get('message') }),
+    });
+    const data = await res.json();
+    setIsBroadcastOpen(false);
+    alert(`Sukses! Pengumuman sedang dikirim via WA ke ${data.count} penghuni aktif.`);
+  };
+
+  const handleLogout = async () => {
+    if (!confirm('Yakin ingin keluar dari dashboard?')) return;
+    await logoutAction();
+    router.push('/login');
   };
 
   const resolveTicket = async (ticketId: string) => {
@@ -226,11 +250,24 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => setIsExpenseOpen(true)}
-              className="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/25"
+              className="w-full mb-3 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/25"
             >
               + Catat Keluar
             </button>
+            <button
+              onClick={() => setIsBroadcastOpen(true)}
+              className="w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white text-sm font-bold py-3 rounded-xl transition-all"
+            >
+              📢 Broadcast WA
+            </button>
           </div>
+        </div>
+        
+        <div className="mt-auto p-6">
+           <button onClick={handleLogout} className="w-full text-slate-500 hover:text-white hover:bg-rose-500/20 px-4 py-3 rounded-2xl font-bold transition-all flex items-center justify-center gap-2">
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+             Keluar Sistem
+           </button>
         </div>
       </aside>
 
@@ -895,6 +932,34 @@ export default function Dashboard() {
             >
               Tutup Jendela
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Broadcast Modal */}
+      {isBroadcastOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <h2 className="text-2xl font-black mb-2 text-slate-800 tracking-tight">Kirim Pengumuman</h2>
+            <p className="text-sm text-slate-500 mb-6 font-medium">Pesan ini akan otomatis dikirimkan oleh Bot WA ke seluruh penghuni kos yang berstatus aktif.</p>
+            <form onSubmit={handleBroadcastSubmit} className="space-y-5">
+              <div>
+                <textarea 
+                  required 
+                  name="message" 
+                  rows={4}
+                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 resize-none" 
+                  placeholder="Ketik pengumuman di sini... (Contoh: Besok pagi pukul 09:00 air akan dimatikan sementara karena ada perbaikan pompa)." 
+                />
+              </div>
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-4 font-bold text-slate-500 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors">Batal</button>
+                <button type="submit" className="flex-1 py-4 font-bold text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                  Kirim Broadcast
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

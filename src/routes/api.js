@@ -239,4 +239,32 @@ router.post('/checkout', async (req, res) => {
   }
 });
 
+// Endpoint untuk Broadcast Pengumuman ke semua penyewa aktif
+router.post('/broadcast', async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'Pesan wajib diisi' });
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT t.name, t.phone_number 
+      FROM tenants t
+      JOIN room_leases rl ON rl.tenant_id = t.id
+      WHERE rl.status = 'ACTIVE'
+    `);
+
+    let sentCount = 0;
+    for (const tenant of rows) {
+      if (tenant.phone_number) {
+        const broadcastMsg = `*[PENGUMUMAN BERESKOS]*\nHalo ${tenant.name},\n\n${message}`;
+        sendWA(tenant.phone_number, broadcastMsg);
+        sentCount++;
+      }
+    }
+
+    res.json({ success: true, count: sentCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
