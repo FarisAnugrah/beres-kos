@@ -170,4 +170,30 @@ const sendWAWithQRIS = async (phone, message) => {
   }
 };
 
-module.exports = { sendWA, sendWAWithQRIS };
+const sendWAWithLocalImage = async (phone, caption, localFilePath) => {
+  if (!isReady) return false;
+  try {
+    let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
+    const chatId = `${formatted}@c.us`;
+
+    // Gunakan fungsi MessageMedia.fromFilePath milik library
+    const media = MessageMedia.fromFilePath(localFilePath);
+
+    await client.sendMessage(chatId, media, { caption: caption });
+
+    console.log(`[WA] ✔️ Foto bukti + Pesan sukses terkirim ke ${phone}`);
+    return true;
+  } catch (err) {
+    console.error(`[WA] ❌ Error kirim Foto Bukti ke ${phone}:`, err.message);
+
+    // Fallback: Jika media file gagal (bug library), kirim teks saja
+    console.log(`[WA] Mengirim teks fallback tanpa gambar.`);
+    await client.sendMessage(
+      phone.replace(/^0/, '62').replace(/\D/g, '') + '@c.us',
+      caption + '\n\n*(Sistem gagal melampirkan file foto bukti)*'
+    );
+    return false;
+  }
+};
+
+module.exports = { sendWA, sendWAWithQRIS, sendWAWithLocalImage };

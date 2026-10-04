@@ -44,13 +44,15 @@ router.get('/tickets', async (req, res) => {
   }
 });
 
-// Endpoint untuk menyelesaikan tiket
-router.post('/tickets/:id/resolve', async (req, res) => {
+// Endpoint untuk menyelesaikan tiket dengan bukti foto
+router.post('/tickets/resolve', upload.single('evidence'), async (req, res) => {
   try {
-    const ticketId = req.params.id;
+    const { ticketId } = req.body;
+    const evidenceUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
     await pool.query(`UPDATE tickets SET status = 'RESOLVED' WHERE id = $1`, [ticketId]);
 
-    // Opsional: Ambil nomor WA penyewa untuk dikabari via Bot
+    // Ambil nomor WA penyewa untuk dikabari via Bot beserta foto bukti
     const { rows } = await pool.query(
       `
       SELECT t.description, r.room_number, ten.phone_number, ten.name
@@ -65,8 +67,16 @@ router.post('/tickets/:id/resolve', async (req, res) => {
 
     if (rows.length > 0) {
       const { description, room_number, phone_number, name } = rows[0];
-      const message = `Halo ${name},\n\nLaporan kerusakan Anda untuk Kamar ${room_number} telah *Selesai Dikerjakan* oleh Admin/Teknisi.\n\n_Keluhan awal: "${description}"_\n\nTerima kasih telah lapor ke BeresKos!`;
-      sendWA(phone_number, message);
+      const message = `Halo ${name},\n\nLaporan kerusakan Anda untuk Kamar ${room_number} telah *Selesai Dikerjakan* oleh Admin/Teknisi.\n\n_Keluhan awal: "${description}"_\n\nTerlampir foto bukti perbaikan dari teknisi kami. Terima kasih telah lapor ke BeresKos!`;
+
+      // Jika ada file gambar, kita kirimkan bersama pesan
+      if (evidenceUrl && req.file) {
+        // panggil fungsi bot khusus kirim gambar lokal yang akan kita buat di wa.js
+        const { sendWAWithLocalImage } = require('../services/wa');
+        sendWAWithLocalImage(phone_number, message, req.file.path);
+      } else {
+        sendWA(phone_number, message);
+      }
     }
 
     res.json({ success: true });

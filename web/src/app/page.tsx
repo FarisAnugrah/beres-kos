@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [detailRoom, setDetailRoom] = useState<any>(null);
   const [checkOutRoom, setCheckOutRoom] = useState<any>(null);
+  const [resolveTicketId, setResolveTicketId] = useState<string>('');
   const [filterType, setFilterType] = useState('ALL');
 
   // Pagination & Filter untuk Tagihan
@@ -136,9 +137,18 @@ export default function Dashboard() {
     router.push('/login');
   };
 
-  const resolveTicket = async (ticketId: string) => {
-    if (!confirm('Tandai laporan kerusakan ini sebagai sudah diperbaiki?')) return;
-    await fetch(`/api/tickets/${ticketId}/resolve`, { method: 'POST' });
+  const resolveTicket = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    formData.append('ticketId', resolveTicketId);
+
+    await fetch(`/api/tickets/resolve`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    setResolveTicketId('');
+    alert('Laporan berhasil diselesaikan dan bukti foto terkirim ke WA penyewa!');
     loadData();
   };
 
@@ -262,12 +272,22 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-        
+
         <div className="mt-auto p-6">
-           <button onClick={handleLogout} className="w-full text-slate-500 hover:text-white hover:bg-rose-500/20 px-4 py-3 rounded-2xl font-bold transition-all flex items-center justify-center gap-2">
-             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-             Keluar Sistem
-           </button>
+          <button
+            onClick={handleLogout}
+            className="w-full text-slate-500 hover:text-white hover:bg-rose-500/20 px-4 py-3 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              ></path>
+            </svg>
+            Keluar Sistem
+          </button>
         </div>
       </aside>
 
@@ -638,10 +658,24 @@ export default function Dashboard() {
                 </div>
                 {t.status === 'PENDING' && (
                   <button
-                    onClick={() => resolveTicket(t.id)}
-                    className="w-full mt-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-sm"
+                    onClick={() => setResolveTicketId(t.id)}
+                    className="w-full mt-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
                   >
-                    Tandai Sudah Diperbaiki
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                      ></path>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                      ></path>
+                    </svg>
+                    Tandai Selesai + Foto
                   </button>
                 )}
               </div>
@@ -940,23 +974,87 @@ export default function Dashboard() {
       {isBroadcastOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
-            <h2 className="text-2xl font-black mb-2 text-slate-800 tracking-tight">Kirim Pengumuman</h2>
-            <p className="text-sm text-slate-500 mb-6 font-medium">Pesan ini akan otomatis dikirimkan oleh Bot WA ke seluruh penghuni kos yang berstatus aktif.</p>
+            <h2 className="text-2xl font-black mb-2 text-slate-800 tracking-tight">
+              Kirim Pengumuman
+            </h2>
+            <p className="text-sm text-slate-500 mb-6 font-medium">
+              Pesan ini akan otomatis dikirimkan oleh Bot WA ke seluruh penghuni kos yang berstatus
+              aktif.
+            </p>
             <form onSubmit={handleBroadcastSubmit} className="space-y-5">
               <div>
-                <textarea 
-                  required 
-                  name="message" 
+                <textarea
+                  required
+                  name="message"
                   rows={4}
-                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 resize-none" 
-                  placeholder="Ketik pengumuman di sini... (Contoh: Besok pagi pukul 09:00 air akan dimatikan sementara karena ada perbaikan pompa)." 
+                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 resize-none"
+                  placeholder="Ketik pengumuman di sini... (Contoh: Besok pagi pukul 09:00 air akan dimatikan sementara karena ada perbaikan pompa)."
                 />
               </div>
               <div className="flex gap-4 pt-2">
-                <button type="button" onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-4 font-bold text-slate-500 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors">Batal</button>
-                <button type="submit" className="flex-1 py-4 font-bold text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                <button
+                  type="button"
+                  onClick={() => setIsBroadcastOpen(false)}
+                  className="flex-1 py-4 font-bold text-slate-500 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-4 font-bold text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    ></path>
+                  </svg>
                   Kirim Broadcast
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket Resolve Modal with Photo Evidence */}
+      {resolveTicketId && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <h2 className="text-2xl font-black mb-2 text-slate-800 tracking-tight">
+              Selesaikan Laporan
+            </h2>
+            <p className="text-sm text-slate-500 mb-6 font-medium">
+              Unggah foto bukti bahwa kerusakan telah berhasil diperbaiki oleh teknisi Anda.
+            </p>
+            <form onSubmit={resolveTicket} className="space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  Upload Foto Bukti Perbaikan (Wajib)
+                </label>
+                <input
+                  required
+                  type="file"
+                  name="evidence"
+                  accept="image/*"
+                  className="w-full text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer border border-dashed border-slate-300 rounded-2xl p-2 bg-slate-50"
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setResolveTicketId('')}
+                  className="flex-1 py-4 font-bold text-slate-500 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-4 font-bold text-white bg-emerald-600 rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+                >
+                  Kirim Bukti Selesai
                 </button>
               </div>
             </form>
