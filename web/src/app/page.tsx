@@ -442,7 +442,30 @@ export default function Dashboard() {
           {/* Invoice History */}
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Riwayat Tagihan Sewa</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-slate-800">Riwayat Tagihan Sewa</h3>
+                <a
+                  href="/api/export-csv?type=invoices"
+                  target="_blank"
+                  className="text-xs bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1"
+                  title="Unduh Laporan CSV"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    ></path>
+                  </svg>
+                  Export CSV
+                </a>
+              </div>
               <div className="flex gap-2">
                 <input
                   type="date"
@@ -538,7 +561,30 @@ export default function Dashboard() {
           {/* Ledger Recent Transactions */}
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Riwayat Kas Dapur</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-slate-800">Riwayat Kas Dapur</h3>
+                <a
+                  href="/api/export-csv?type=ledger"
+                  target="_blank"
+                  className="text-xs bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1"
+                  title="Unduh Laporan CSV"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    ></path>
+                  </svg>
+                  Export CSV
+                </a>
+              </div>
               <div className="flex gap-2">
                 <input
                   type="date"

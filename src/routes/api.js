@@ -10,7 +10,70 @@ const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
 const upload = multer({ dest: 'uploads/' });
 
-// Endpoint untuk mengambil riwayat 50 tagihan terakhir
+// Endpoint untuk Export Laporan ke CSV
+router.get('/export-csv', async (req, res) => {
+  try {
+    const { type } = req.query; // 'invoices' atau 'ledger'
+
+    if (type === 'invoices') {
+      const { rows } = await pool.query(`
+        SELECT i.id as "ID Invoice", t.name as "Nama Penyewa", r.room_number as "Kamar",
+               i.total_amount as "Nominal (Rp)", i.status as "Status", 
+               TO_CHAR(i.created_at, 'YYYY-MM-DD HH24:MI:SS') as "Tanggal Dibuat"
+        FROM invoices i
+        JOIN room_leases rl ON i.lease_id = rl.id
+        JOIN rooms r ON rl.room_id = r.id
+        JOIN tenants t ON rl.tenant_id = t.id
+        ORDER BY i.created_at DESC
+      `);
+
+      if (!rows.length) return res.send('Tidak ada data tagihan.');
+
+      const headers = Object.keys(rows[0]).join(',');
+      const csv = rows
+        .map((row) =>
+          Object.values(row)
+            .map((v) => `"${v}"`)
+            .join(',')
+        )
+        .join('\n');
+
+      res.header('Content-Type', 'text/csv');
+      res.attachment('Laporan_Tagihan_BeresKos.csv');
+      return res.send(`${headers}\n${csv}`);
+    }
+
+    if (type === 'ledger') {
+      const { rows } = await pool.query(`
+        SELECT type as "Tipe (IN/OUT)", amount as "Nominal (Rp)", notes as "Keterangan", 
+               TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as "Tanggal Transaksi"
+        FROM utility_transactions
+        ORDER BY created_at DESC
+      `);
+
+      if (!rows.length) return res.send('Tidak ada data transaksi kas.');
+
+      const headers = Object.keys(rows[0]).join(',');
+      const csv = rows
+        .map((row) =>
+          Object.values(row)
+            .map((v) => `"${v}"`)
+            .join(',')
+        )
+        .join('\n');
+
+      res.header('Content-Type', 'text/csv');
+      res.attachment('Laporan_KasDapur_BeresKos.csv');
+      return res.send(`${headers}\n${csv}`);
+    }
+
+    res
+      .status(400)
+      .json({ error: 'Tipe export tidak valid. Gunakan ?type=invoices atau ?type=ledger' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/invoices', async (req, res) => {
   try {
     const { rows } = await pool.query(`
