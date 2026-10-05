@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: bereskos_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bereskos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: bereskos_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bereskos_backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/bereskos
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - XENDIT_SECRET_KEY=${XENDIT_SECRET_KEY:-YOUR_XENDIT_SECRET_KEY_HERE}
+      - XENDIT_SUB_ACCOUNT_ID=${XENDIT_SUB_ACCOUNT_ID:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./.wwebjs_auth:/app/.wwebjs_auth
+    depends_on:
+      - db
+      - redis
+    command: >
+      sh -c "node scripts/setup-db.js && node src/server.js"
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: bereskos_frontend
+    restart: always
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - NEXT_PUBLIC_API_URL=http://backend:3000
+    ports:
+      - "3001:3000" # Next.js berjalan di port internal 3000, terekspos ke luar di 3001
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
