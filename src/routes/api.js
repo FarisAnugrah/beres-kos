@@ -113,7 +113,10 @@ router.post('/tickets/resolve', upload.single('evidence'), async (req, res) => {
     const { ticketId } = req.body;
     const evidenceUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    await pool.query(`UPDATE tickets SET status = 'RESOLVED' WHERE id = $1`, [ticketId]);
+    await pool.query(
+      `UPDATE tickets SET status = 'RESOLVED', evidence_url = $2, updated_at = NOW() WHERE id = $1`,
+      [ticketId, evidenceUrl]
+    );
 
     // Ambil nomor WA penyewa untuk dikabari via Bot beserta foto bukti
     const { rows } = await pool.query(
@@ -265,7 +268,10 @@ router.post('/checkout', async (req, res) => {
     const finalBill = checkoutDay <= 5 ? checkoutDay * 50000 : monthly_price;
 
     // 3. Update Status Kamar & Kontrak
-    await client.query(`UPDATE room_leases SET status = 'TERMINATED' WHERE id = $1`, [leaseId]);
+    await client.query(
+      `UPDATE room_leases SET status = 'TERMINATED', updated_at = NOW() WHERE id = $1`,
+      [leaseId]
+    );
     await client.query(`UPDATE rooms SET status = 'VACANT' WHERE id = $1`, [room_id]);
 
     // 4. Buat invoice terakhir

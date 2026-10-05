@@ -1,4 +1,7 @@
 const { Worker, Queue } = require('bullmq');
+const cron = require('node-cron');
+const fs = require('fs');
+const path = require('path');
 const pool = require('../config/db');
 const redisConn = require('../config/redis');
 const { sendWA } = require('../services/wa');
@@ -80,3 +83,62 @@ const worker = new Worker(
 );
 
 worker.on('failed', (job, err) => console.error(`Job ${job.id} error:`, err));
+
+// =========================================================================
+// CRON JOB: Auto-Cleanup File Sampah (KTP & Foto Bukti)
+// Berjalan setiap tanggal 1 setiap bulannya jam 03:00 pagi.
+// =========================================================================
+cron.schedule('0 3 1 * *', async () => {
+  console.log('[CRON] Menjalankan pembersihan file sampah (Garbage Collection)...');
+  const client = await pool.connect();
+
+  try {
+    // 1. Hapus file KTP dari penyewa yang sudah CHECK-OUT (TERMINATED) lebih dari 3 bulan
+    const { rows: expiredLeases } = await client.query(`
+      SELECT t.id, t.id_card_url 
+      FROM tenants t
+      JOIN room_leases rl ON rl.tenant_id = t.id
+      WHERE rl.status = 'TERMINATED' 
+        AND rl.updated_at < NOW() - INTERVAL '3 months'
+        AND t.id_card_url IS NOT NULL
+    `);
+
+    for (const lease of expiredLeases) {
+      if (lease.id_card_url) {
+        const filePath = path.join(__dirname, '../..', lease.id_card_url);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[CRON] Menghapus KTP kedaluwarsa: ${lease.id_card_url}`);
+        }
+        // Set URL jadi null agar tidak dipanggil lagi bulan depan
+        await client.query(`UPDATE tenants SET id_card_url = NULL WHERE id = $1`, [lease.id]);
+      }
+    }
+
+    // 2. Hapus file Foto Bukti Resolusi Tiket yang usianya sudah lebih dari 3 bulan
+    const { rows: expiredTickets } = await client.query(`
+      SELECT id, evidence_url 
+      FROM tickets 
+      WHERE status = 'RESOLVED' 
+        AND updated_at < NOW() - INTERVAL '3 months'
+        AND evidence_url IS NOT NULL
+    `);
+
+    for (const ticket of expiredTickets) {
+      if (ticket.evidence_url) {
+        const filePath = path.join(__dirname, '../..', ticket.evidence_url);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[CRON] Menghapus Foto Bukti Tiket lama: ${ticket.evidence_url}`);
+        }
+        await client.query(`UPDATE tickets SET evidence_url = NULL WHERE id = $1`, [ticket.id]);
+      }
+    }
+
+    console.log('[CRON] Pembersihan file sampah selesai!');
+  } catch (err) {
+    console.error('[CRON] Gagal melakukan auto-cleanup:', err.message);
+  } finally {
+    client.release();
+  }
+});
