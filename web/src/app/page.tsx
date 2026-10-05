@@ -303,6 +303,21 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="hidden md:flex gap-4 items-center">
+            <a
+              href="/api/export-csv?type=tenants"
+              target="_blank"
+              className="bg-emerald-50 px-5 py-3 rounded-2xl border border-emerald-200 shadow-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Data Warga
+            </a>
             <button
               onClick={() => setIsAddRoomOpen(true)}
               className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm font-bold text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors"
@@ -780,7 +795,44 @@ export default function Dashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">Upload KTP</label>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  NIK KTP (Opsional)
+                </label>
+                <input
+                  type="text"
+                  name="nik"
+                  className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                  placeholder="16 digit angka NIK"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">
+                    Plat Kendaraan (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    name="vehiclePlate"
+                    className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 uppercase"
+                    placeholder="B 1234 XYZ"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">
+                    Kontak Darurat (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContact"
+                    className="w-full border border-slate-200 rounded-2xl p-4 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                    placeholder="08123 (Ibu/Wali)"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  Upload Foto KTP Asli
+                </label>
                 <input
                   type="file"
                   name="ktp"

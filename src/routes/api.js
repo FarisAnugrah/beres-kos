@@ -15,6 +15,35 @@ router.get('/export-csv', async (req, res) => {
   try {
     const { type } = req.query; // 'invoices' atau 'ledger'
 
+    if (type === 'tenants') {
+      const { rows } = await pool.query(`
+        SELECT r.room_number as "Nomor Kamar", t.name as "Nama Lengkap", 
+               t.nik as "NIK KTP", t.phone_number as "No. HP/WA", 
+               t.vehicle_plate as "Plat Kendaraan", t.emergency_contact as "Kontak Darurat",
+               rl.status as "Status Sewa", TO_CHAR(rl.start_date, 'YYYY-MM-DD') as "Tgl Masuk"
+        FROM tenants t
+        JOIN room_leases rl ON rl.tenant_id = t.id
+        JOIN rooms r ON rl.room_id = r.id
+        WHERE rl.status = 'ACTIVE'
+        ORDER BY r.room_number ASC
+      `);
+
+      if (!rows.length) return res.send('Tidak ada penyewa aktif saat ini.');
+
+      const headers = Object.keys(rows[0]).join(',');
+      const csv = rows
+        .map((row) =>
+          Object.values(row)
+            .map((v) => `"${v || '-'}"`)
+            .join(',')
+        )
+        .join('\n');
+
+      res.header('Content-Type', 'text/csv');
+      res.attachment('Rekap_Warga_Kos.csv');
+      return res.send(`${headers}\n${csv}`);
+    }
+
     if (type === 'invoices') {
       const { rows } = await pool.query(`
         SELECT i.id as "ID Invoice", t.name as "Nama Penyewa", r.room_number as "Kamar",
@@ -181,7 +210,7 @@ router.post('/rooms', async (req, res) => {
 });
 
 router.post('/checkin', upload.single('ktp'), async (req, res) => {
-  const { roomId, name, phone, dueDay, startDate } = req.body;
+  const { roomId, name, phone, dueDay, startDate, nik, vehiclePlate, emergencyContact } = req.body;
   const ktpUrl = req.file ? `/uploads/${req.file.filename}` : null;
   const client = await pool.connect();
 
@@ -189,8 +218,8 @@ router.post('/checkin', upload.single('ktp'), async (req, res) => {
     await client.query('BEGIN');
 
     const tenantRes = await client.query(
-      `INSERT INTO tenants (name, phone_number, id_card_url) VALUES ($1, $2, $3) RETURNING id`,
-      [name, phone, ktpUrl]
+      `INSERT INTO tenants (name, phone_number, id_card_url, nik, vehicle_plate, emergency_contact) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [name, phone, ktpUrl, nik || null, vehiclePlate || null, emergencyContact || null]
     );
     const tenantId = tenantRes.rows[0].id;
 
