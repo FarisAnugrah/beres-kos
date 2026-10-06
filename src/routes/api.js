@@ -197,12 +197,47 @@ router.get('/rooms', async (req, res) => {
 });
 
 router.post('/rooms', async (req, res) => {
-  const { roomNumber, monthlyPrice } = req.body;
+  const { roomNumber, monthlyPrice, hasTokenMeter } = req.body;
   try {
-    await pool.query(`INSERT INTO rooms (room_number, monthly_price) VALUES ($1, $2)`, [
-      roomNumber,
-      monthlyPrice,
+    await pool.query(
+      `INSERT INTO rooms (room_number, monthly_price, has_token_meter) VALUES ($1, $2, $3)`,
+      [roomNumber, monthlyPrice, hasTokenMeter || false]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/rooms/:id/kwh', async (req, res) => {
+  const { kwh } = req.body;
+  const roomId = req.params.id;
+  try {
+    await pool.query(`UPDATE rooms SET current_kwh = $1, last_kwh_update = NOW() WHERE id = $2`, [
+      kwh,
+      roomId,
     ]);
+
+    // Jika kWh di bawah 15, kirim notif darurat ke anak kos
+    if (Number(kwh) <= 15) {
+      const { rows } = await pool.query(
+        `
+        SELECT t.phone_number, t.name, r.room_number 
+        FROM tenants t 
+        JOIN room_leases rl ON rl.tenant_id = t.id 
+        JOIN rooms r ON rl.room_id = r.id 
+        WHERE rl.status = 'ACTIVE' AND r.id = $1
+      `,
+        [roomId]
+      );
+
+      if (rows.length > 0) {
+        const { sendWA } = require('../services/wa');
+        const message = `⚠️ *PERINGATAN LISTRIK KOS*\n\nHalo ${rows[0].name},\n\nSistem mencatat sisa token listrik Kamar ${rows[0].room_number} Anda saat ini tersisa *${kwh} kWh* (Mendekati habis).\n\nMohon segera lakukan pengisian ulang token agar listrik tidak padam tiba-tiba. Terima kasih!`;
+        sendWA(rows[0].phone_number, message);
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

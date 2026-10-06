@@ -119,6 +119,7 @@ export default function Dashboard() {
       body: JSON.stringify({
         roomNumber: formData.get('roomNumber'),
         monthlyPrice: Number(formData.get('monthlyPrice')),
+        hasTokenMeter: formData.get('hasTokenMeter') === 'on',
       }),
     });
     setIsAddRoomOpen(false);
@@ -488,6 +489,35 @@ export default function Dashboard() {
                         Tgl {room.due_day_of_month}
                       </span>
                     </div>
+                    {room.has_token_meter && (
+                      <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-600">
+                        <div className="flex justify-between items-center text-sm mb-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">
+                            Sisa Token Listrik
+                          </span>
+                          <span
+                            className={`font-bold px-2 py-0.5 rounded-md ${Number(room.current_kwh) <= 15 ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}
+                          >
+                            {room.current_kwh} kWh
+                          </span>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const val = prompt('Masukkan update meteran kWh saat ini:');
+                            if (!val || isNaN(Number(val))) return;
+                            await fetch(`/api/rooms/${room.id}/kwh`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ kwh: Number(val) }),
+                            });
+                            loadData();
+                          }}
+                          className="w-full text-xs font-bold text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 py-1.5 rounded-lg transition-colors"
+                        >
+                          + Update Meteran
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -1072,6 +1102,21 @@ export default function Dashboard() {
                     </div>
                   </label>
                 </div>
+              </div>
+              <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <input
+                  type="checkbox"
+                  name="hasTokenMeter"
+                  id="hasTokenMeter"
+                  className="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                />
+                <label
+                  htmlFor="hasTokenMeter"
+                  className="text-sm font-bold text-slate-700 cursor-pointer"
+                >
+                  Kamar ini punya meteran token listrik mandiri (Peringatan bot otomatis jika kWh
+                  kritis)
+                </label>
               </div>
               <div className="flex gap-4 pt-4">
                 <button
