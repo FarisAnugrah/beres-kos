@@ -382,12 +382,15 @@ router.post('/checkout', async (req, res) => {
   }
 });
 
-// Endpoint untuk Broadcast Pengumuman ke semua penyewa aktif
+// Endpoint untuk Broadcast Pengumuman ke semua penyewa aktif & Papan Pengumuman
 router.post('/broadcast', async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Pesan wajib diisi' });
 
   try {
+    // Simpan ke Papan Pengumuman Digital
+    await pool.query(`INSERT INTO announcements (message) VALUES ($1)`, [message]);
+
     const { rows } = await pool.query(`
       SELECT t.name, t.phone_number 
       FROM tenants t
@@ -407,6 +410,57 @@ router.post('/broadcast', async (req, res) => {
     res.json({ success: true, count: sentCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint untuk mengambil pengumuman 7 hari terakhir
+router.get('/announcements', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT * FROM announcements 
+      WHERE created_at > NOW() - INTERVAL '7 days' 
+      ORDER BY created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint untuk fitur Pindah Kamar (Room Transfer)
+router.post('/transfer', async (req, res) => {
+  const { leaseId, newRoomId } = req.body;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Ambil data kamar lama
+    const leaseRes = await client.query(`SELECT room_id FROM room_leases WHERE id = $1`, [leaseId]);
+    if (!leaseRes.rows.length) throw new Error('Kontrak tidak ditemukan');
+    const oldRoomId = leaseRes.rows[0].room_id;
+
+    // Pastikan kamar baru benar-benar kosong
+    const newRoomRes = await client.query(`SELECT status FROM rooms WHERE id = $1`, [newRoomId]);
+    if (newRoomRes.rows[0].status !== 'VACANT') throw new Error('Kamar tujuan tidak kosong');
+
+    // Tukar status kamar
+    await client.query(`UPDATE rooms SET status = 'VACANT' WHERE id = $1`, [oldRoomId]);
+    await client.query(`UPDATE rooms SET status = 'OCCUPIED' WHERE id = $1`, [newRoomId]);
+
+    // Pindahkan kontrak
+    await client.query(`UPDATE room_leases SET room_id = $1, updated_at = NOW() WHERE id = $2`, [
+      newRoomId,
+      leaseId,
+    ]);
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

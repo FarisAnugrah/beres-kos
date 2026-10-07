@@ -12,7 +12,7 @@ export default function Login() {
     e.preventDefault();
     const success = await loginAction(password);
     if (success) {
-      router.push('/');
+      router.push('/admin');
     } else {
       setError(true);
     }
