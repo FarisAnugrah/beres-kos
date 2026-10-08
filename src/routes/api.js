@@ -105,7 +105,7 @@ router.get('/export-csv', async (req, res) => {
 });
 router.get('/invoices', async (req, res) => {
   try {
-    const { rows } = await pool.query(`
+    const { rows: history } = await pool.query(`
       SELECT i.id, i.total_amount, i.status, i.created_at, 
              r.room_number, t.name as tenant_name
       FROM invoices i
@@ -115,7 +115,23 @@ router.get('/invoices', async (req, res) => {
       ORDER BY i.created_at DESC
       LIMIT 50
     `);
-    res.json(rows);
+
+    // Kalkulasi Total Pemasukan Lunas khusus bulan ini
+    const { rows: metrics } = await pool.query(`
+      SELECT SUM(total_amount) as current_month_revenue, COUNT(id) as current_month_paid_count
+      FROM invoices 
+      WHERE status = 'PAID' 
+        AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
+    `);
+
+    res.json({
+      history,
+      metrics: {
+        revenue: metrics[0].current_month_revenue || 0,
+        paidCount: metrics[0].current_month_paid_count || 0
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

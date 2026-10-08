@@ -7,6 +7,7 @@ export default function Dashboard() {
   const [rooms, setRooms] = useState([]);
   const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
   const [invoices, setInvoices] = useState([]);
+  const [invoiceMetrics, setInvoiceMetrics] = useState({ revenue: 0, paidCount: 0 });
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -49,7 +50,11 @@ export default function Dashboard() {
       if (resL.ok) setLedger(await resL.json());
 
       const resI = await fetch('/api/invoices');
-      if (resI.ok) setInvoices(await resI.json());
+      if (resI.ok) {
+        const invData = await resI.json();
+        setInvoices(invData.history);
+        setInvoiceMetrics(invData.metrics);
+      }
 
       const resT = await fetch('/api/tickets');
       if (resT.ok) setTickets(await resT.json());
@@ -359,7 +364,7 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="flex-1 p-10 h-screen overflow-y-auto">
-        <header className="mb-10 flex justify-between items-end">
+        <header className="mb-10 flex flex-col xl:flex-row xl:justify-between xl:items-end gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
           <div>
             <div className="flex items-center gap-4 mb-1">
               <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">
@@ -395,6 +400,20 @@ export default function Dashboard() {
               Pantau status sewa dan jatuh tempo secara real-time.
             </p>
           </div>
+          
+          <div className="flex flex-wrap gap-4">
+            <div className="bg-indigo-600 px-6 py-3 rounded-2xl shadow-lg shadow-indigo-600/20 text-white flex flex-col justify-center min-w-[200px]">
+              <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-0.5">Pemasukan Bulan Ini</span>
+              <span className="text-2xl font-black tracking-tight">Rp {Number(invoiceMetrics.revenue).toLocaleString('id-ID')}</span>
+            </div>
+            <div className="bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center min-w-[150px]">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tagihan Terbayar</span>
+              <span className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{invoiceMetrics.paidCount} <span className="text-sm text-slate-500">Kamar</span></span>
+            </div>
+          </div>
+        </header>
+
+        <div className="mb-8 flex justify-between items-end pb-2">
           <div className="hidden md:flex gap-4 items-center">
             <a
               href="/api/export-csv?type=tenants"
@@ -430,7 +449,7 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Filter UI */}
         <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
@@ -1217,32 +1236,32 @@ export default function Dashboard() {
       {/* Tenant Detail Modal */}
       {detailRoom && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100">
-            <h2 className="text-2xl font-black mb-6 text-slate-800 tracking-tight">
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-700">
+            <h2 className="text-2xl font-black mb-6 text-slate-800 dark:text-slate-100 tracking-tight">
               Info Penghuni Kamar {detailRoom.room_number}
             </h2>
             <div className="space-y-5 mb-8">
               <div>
-                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">
+                <span className="text-slate-500 dark:text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">
                   Nama Lengkap
                 </span>
-                <span className="font-black text-xl text-slate-800">{detailRoom.tenant_name}</span>
+                <span className="font-black text-xl text-slate-800 dark:text-slate-200">{detailRoom.tenant_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-1">
+                <span className="text-slate-500 dark:text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">
                   WhatsApp
                 </span>
                 <a
                   href={`https://wa.me/${detailRoom.tenant_phone}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-black text-lg text-indigo-600 hover:underline"
+                  className="font-black text-lg text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   {detailRoom.tenant_phone || '-'}
                 </a>
               </div>
               <div>
-                <span className="text-slate-500 block text-xs font-bold uppercase tracking-wider mb-2">
+                <span className="text-slate-500 dark:text-slate-400 block text-xs font-bold uppercase tracking-wider mb-2">
                   Dokumen KTP
                 </span>
                 {detailRoom.tenant_ktp ? (
@@ -1255,11 +1274,11 @@ export default function Dashboard() {
                     <img
                       src={detailRoom.tenant_ktp}
                       alt="KTP"
-                      className="w-full h-48 object-cover rounded-2xl border-2 border-slate-200 group-hover:border-indigo-400 transition-colors shadow-sm"
+                      className="w-full h-48 object-cover rounded-2xl border-2 border-slate-200 dark:border-slate-600 group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-colors shadow-sm"
                     />
                   </a>
                 ) : (
-                  <div className="w-full h-32 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 text-sm font-medium border-2 border-dashed border-slate-200">
+                  <div className="w-full h-32 bg-slate-50 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium border-2 border-dashed border-slate-200 dark:border-slate-600">
                     Tidak ada KTP terlampir
                   </div>
                 )}
@@ -1267,7 +1286,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => setDetailRoom(null)}
-              className="w-full py-4 font-bold text-slate-600 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"
+              className="w-full py-4 font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
             >
               Tutup Jendela
             </button>
