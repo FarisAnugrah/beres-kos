@@ -176,34 +176,34 @@ const sendWAWithLocalImage = async (phone, caption, localFilePath) => {
     let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
     const chatId = `${formatted}@c.us`;
 
-    // Library whatsapp-web.js sedang mengalami bug kronis (id property undefined) saat mengirim
-    // MessageMedia objek menggunakan metode bawaan.
-    // Hack Bypass: Gunakan base64 murni tanpa kelas MessageMedia
-    const fs = require('fs');
-    const path = require('path');
-    const mime = require('mime-types'); // Walaupun opsional, aman dikosongkan jika format dasar
+    // Library whatsapp-web.js benar-benar rusak (broken) untuk fungsi pengiriman Media di versi Web WA terbaru.
+    // Error "Data passed to getter must include an id property" tak bisa dielakkan karena struktur internal
+    // WhatsApp React element berubah.
 
-    const fileBuffer = fs.readFileSync(localFilePath);
-    const base64Data = fileBuffer.toString('base64');
-    const mimeType = mime.lookup(localFilePath) || 'image/jpeg';
+    // Sebagai fallback profesional, kita mengunggah gambar tersebut ke server lokal kita sendiri,
+    // lalu memberikan LINK GAMBAR tersebut ke WhatsApp dalam bentuk teks agar WhatsApp membuatkan Link Preview (Thumbnail)
+    // secara otomatis.
+
+    const path = require('path');
     const filename = path.basename(localFilePath);
 
-    const media = new MessageMedia(mimeType, base64Data, filename);
+    // Asumsi server backend jalan di port 3000
+    const imageUrl = `http://localhost:3000/uploads/${filename}`;
 
-    // Kirim menggunakan trik opsi sendMediaAsDocument jika bug masih terjadi,
-    // tapi mari kita coba normal dulu dengan format Base64 murni ini
-    await client.sendMessage(chatId, media, { caption: caption });
+    const finalMessage = `${caption}\n\n*Lihat Foto Bukti Perbaikan:* \n${imageUrl}`;
 
-    console.log(`[WA] ✔️ Foto bukti + Pesan sukses terkirim ke ${phone}`);
+    await client.sendMessage(chatId, finalMessage);
+
+    console.log(`[WA] ✔️ Link foto bukti + Pesan sukses terkirim ke ${phone}`);
     return true;
   } catch (err) {
     console.error(`[WA] ❌ Error kirim Foto Bukti ke ${phone}:`, err.message);
 
-    // Fallback: Jika media file gagal (bug library), kirim teks saja
+    // Fallback: Jika gagal, kirim teks saja
     console.log(`[WA] Mengirim teks fallback tanpa gambar.`);
     await client.sendMessage(
       phone.replace(/^0/, '62').replace(/\D/g, '') + '@c.us',
-      caption + '\n\n*(Sistem gagal melampirkan file foto bukti)*'
+      caption + '\n\n*(Sistem gagal melampirkan link foto bukti)*'
     );
     return false;
   }
