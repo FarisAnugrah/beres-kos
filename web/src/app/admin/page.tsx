@@ -33,6 +33,10 @@ export default function Dashboard() {
   const [ledgerEnd, setLedgerEnd] = useState('');
   const LEDGER_PER_PAGE = 5;
 
+  // Pagination Laporan Kerusakan
+  const [ticketPage, setTicketPage] = useState(1);
+  const TICKET_PER_PAGE = 6;
+
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const router = useRouter();
 
@@ -234,6 +238,12 @@ export default function Dashboard() {
   const displayedLedger = filteredLedger.slice(
     (ledgerPage - 1) * LEDGER_PER_PAGE,
     ledgerPage * LEDGER_PER_PAGE
+  );
+
+  const totalTicketPages = Math.ceil(tickets.length / TICKET_PER_PAGE);
+  const displayedTickets = tickets.slice(
+    (ticketPage - 1) * TICKET_PER_PAGE,
+    ticketPage * TICKET_PER_PAGE
   );
 
   return (
@@ -853,7 +863,7 @@ export default function Dashboard() {
             Laporan Kerusakan & Komplain
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tickets.map((t: any) => (
+            {displayedTickets.map((t: any) => (
               <div
                 key={t.id}
                 className={`p-6 rounded-2xl border-2 transition-all shadow-sm flex flex-col ${t.status === 'PENDING' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60'}`}
@@ -901,11 +911,34 @@ export default function Dashboard() {
               </div>
             ))}
             {tickets.length === 0 && (
-              <div className="col-span-full py-12 text-center text-slate-500 font-medium bg-slate-50 rounded-3xl border border-slate-200">
+              <div className="col-span-full py-12 text-center text-slate-500 font-medium bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
                 Belum ada laporan kerusakan dari penyewa.
               </div>
             )}
           </div>
+
+          {/* Ticket Pagination UI */}
+          {totalTicketPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                disabled={ticketPage === 1}
+                onClick={() => setTicketPage((p) => p - 1)}
+                className="px-6 py-3 rounded-2xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                ← Sebelumnya
+              </button>
+              <span className="font-bold text-slate-500 dark:text-slate-400">
+                Hal {ticketPage} dari {totalTicketPages}
+              </span>
+              <button
+                disabled={ticketPage === totalTicketPages}
+                onClick={() => setTicketPage((p) => p + 1)}
+                className="px-6 py-3 rounded-2xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Selanjutnya →
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
