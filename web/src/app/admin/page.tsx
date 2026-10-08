@@ -52,8 +52,8 @@ export default function Dashboard() {
       const resI = await fetch('/api/invoices');
       if (resI.ok) {
         const invData = await resI.json();
-        setInvoices(invData.history);
-        setInvoiceMetrics(invData.metrics);
+        setInvoices(invData.history || []);
+        setInvoiceMetrics(invData.metrics || { revenue: 0, paidCount: 0 });
       }
 
       const resT = await fetch('/api/tickets');
@@ -400,15 +400,23 @@ export default function Dashboard() {
               Pantau status sewa dan jatuh tempo secara real-time.
             </p>
           </div>
-          
+
           <div className="flex flex-wrap gap-4">
             <div className="bg-indigo-600 px-6 py-3 rounded-2xl shadow-lg shadow-indigo-600/20 text-white flex flex-col justify-center min-w-[200px]">
-              <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-0.5">Pemasukan Bulan Ini</span>
-              <span className="text-2xl font-black tracking-tight">Rp {Number(invoiceMetrics.revenue).toLocaleString('id-ID')}</span>
+              <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-0.5">
+                Pemasukan Bulan Ini
+              </span>
+              <span className="text-2xl font-black tracking-tight">
+                Rp {Number(invoiceMetrics.revenue).toLocaleString('id-ID')}
+              </span>
             </div>
             <div className="bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center min-w-[150px]">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tagihan Terbayar</span>
-              <span className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{invoiceMetrics.paidCount} <span className="text-sm text-slate-500">Kamar</span></span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                Tagihan Terbayar
+              </span>
+              <span className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
+                {invoiceMetrics.paidCount} <span className="text-sm text-slate-500">Kamar</span>
+              </span>
             </div>
           </div>
         </header>
@@ -1245,7 +1253,9 @@ export default function Dashboard() {
                 <span className="text-slate-500 dark:text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">
                   Nama Lengkap
                 </span>
-                <span className="font-black text-xl text-slate-800 dark:text-slate-200">{detailRoom.tenant_name}</span>
+                <span className="font-black text-xl text-slate-800 dark:text-slate-200">
+                  {detailRoom.tenant_name}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400 block text-xs font-bold uppercase tracking-wider mb-1">
