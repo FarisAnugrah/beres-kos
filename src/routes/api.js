@@ -30,18 +30,18 @@ router.get('/export-csv', async (req, res) => {
 
       if (!rows.length) return res.send('Tidak ada penyewa aktif saat ini.');
 
-      const headers = Object.keys(rows[0]).join(',');
+      const headers = Object.keys(rows[0]).join(';');
       const csv = rows
         .map((row) =>
           Object.values(row)
-            .map((v) => `"${v || '-'}"`)
-            .join(',')
+            .map((v) => `"${(v || '-').toString().replace(/"/g, '""')}"`)
+            .join(';')
         )
         .join('\n');
 
       res.header('Content-Type', 'text/csv');
       res.attachment('Rekap_Warga_Kos.csv');
-      return res.send(`${headers}\n${csv}`);
+      return res.send(`\uFEFF${headers}\n${csv}`);
     }
 
     if (type === 'invoices') {
@@ -58,18 +58,18 @@ router.get('/export-csv', async (req, res) => {
 
       if (!rows.length) return res.send('Tidak ada data tagihan.');
 
-      const headers = Object.keys(rows[0]).join(',');
+      const headers = Object.keys(rows[0]).join(';');
       const csv = rows
         .map((row) =>
           Object.values(row)
-            .map((v) => `"${v}"`)
-            .join(',')
+            .map((v) => `"${(v || '').toString().replace(/"/g, '""')}"`)
+            .join(';')
         )
         .join('\n');
 
       res.header('Content-Type', 'text/csv');
       res.attachment('Laporan_Tagihan_BeresKos.csv');
-      return res.send(`${headers}\n${csv}`);
+      return res.send(`\uFEFF${headers}\n${csv}`);
     }
 
     if (type === 'ledger') {
@@ -82,18 +82,18 @@ router.get('/export-csv', async (req, res) => {
 
       if (!rows.length) return res.send('Tidak ada data transaksi kas.');
 
-      const headers = Object.keys(rows[0]).join(',');
+      const headers = Object.keys(rows[0]).join(';');
       const csv = rows
         .map((row) =>
           Object.values(row)
-            .map((v) => `"${v}"`)
-            .join(',')
+            .map((v) => `"${(v || '').toString().replace(/"/g, '""')}"`)
+            .join(';')
         )
         .join('\n');
 
       res.header('Content-Type', 'text/csv');
       res.attachment('Laporan_KasDapur_BeresKos.csv');
-      return res.send(`${headers}\n${csv}`);
+      return res.send(`\uFEFF${headers}\n${csv}`);
     }
 
     res
