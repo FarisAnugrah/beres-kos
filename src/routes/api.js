@@ -169,7 +169,8 @@ router.post('/tickets/resolve', upload.single('evidence'), async (req, res) => {
         // panggil fungsi bot khusus kirim gambar lokal
         const { sendWAWithLocalImage } = require('../services/wa');
         const path = require('path');
-        const absolutePath = path.resolve(__dirname, '../../', req.file.path);
+        // Gunakan process.cwd() agar path mengarah ke root project BeresKos
+        const absolutePath = path.resolve(process.cwd(), req.file.path);
         sendWAWithLocalImage(phone_number, message, absolutePath);
       } else {
         sendWA(phone_number, message);
