@@ -176,9 +176,22 @@ const sendWAWithLocalImage = async (phone, caption, localFilePath) => {
     let formatted = phone.replace(/^0/, '62').replace(/\D/g, '');
     const chatId = `${formatted}@c.us`;
 
-    // Gunakan fungsi MessageMedia.fromFilePath milik library
-    const media = MessageMedia.fromFilePath(localFilePath);
+    // Library whatsapp-web.js sedang mengalami bug kronis (id property undefined) saat mengirim
+    // MessageMedia objek menggunakan metode bawaan.
+    // Hack Bypass: Gunakan base64 murni tanpa kelas MessageMedia
+    const fs = require('fs');
+    const path = require('path');
+    const mime = require('mime-types'); // Walaupun opsional, aman dikosongkan jika format dasar
 
+    const fileBuffer = fs.readFileSync(localFilePath);
+    const base64Data = fileBuffer.toString('base64');
+    const mimeType = mime.lookup(localFilePath) || 'image/jpeg';
+    const filename = path.basename(localFilePath);
+
+    const media = new MessageMedia(mimeType, base64Data, filename);
+
+    // Kirim menggunakan trik opsi sendMediaAsDocument jika bug masih terjadi,
+    // tapi mari kita coba normal dulu dengan format Base64 murni ini
     await client.sendMessage(chatId, media, { caption: caption });
 
     console.log(`[WA] ✔️ Foto bukti + Pesan sukses terkirim ke ${phone}`);
