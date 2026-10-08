@@ -166,9 +166,11 @@ router.post('/tickets/resolve', upload.single('evidence'), async (req, res) => {
 
       // Jika ada file gambar, kita kirimkan bersama pesan
       if (evidenceUrl && req.file) {
-        // panggil fungsi bot khusus kirim gambar lokal yang akan kita buat di wa.js
+        // panggil fungsi bot khusus kirim gambar lokal
         const { sendWAWithLocalImage } = require('../services/wa');
-        sendWAWithLocalImage(phone_number, message, req.file.path);
+        const path = require('path');
+        const absolutePath = path.resolve(__dirname, '../../', req.file.path);
+        sendWAWithLocalImage(phone_number, message, absolutePath);
       } else {
         sendWA(phone_number, message);
       }
