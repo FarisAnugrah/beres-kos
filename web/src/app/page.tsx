@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 export default function LandingPage() {
   const [rooms, setRooms] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [filterType, setFilterType] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROOMS_PER_PAGE = 6;
 
   useEffect(() => {
     fetch('/api/rooms')
@@ -20,6 +23,17 @@ export default function LandingPage() {
       document.documentElement.classList.add('dark');
     }
   }, []);
+
+  const filteredRooms = rooms.filter((r: any) => {
+    if (filterType === 'ALL') return true;
+    return Number(r.monthly_price) === Number(filterType);
+  });
+
+  const totalPages = Math.ceil(filteredRooms.length / ROOMS_PER_PAGE);
+  const displayedRooms = filteredRooms.slice(
+    (currentPage - 1) * ROOMS_PER_PAGE,
+    currentPage * ROOMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] font-sans text-slate-800 dark:text-slate-100 transition-colors duration-300">
@@ -74,7 +88,7 @@ export default function LandingPage() {
 
       {/* Available Rooms Section (Match FinTrack Cards) */}
       <main id="kamar" className="max-w-6xl mx-auto pb-32 px-6">
-        <div className="mb-10 flex justify-between items-end border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div className="mb-8 flex justify-between items-end border-b border-slate-200 dark:border-slate-800 pb-6">
           <div>
             <h2 className="text-3xl md:text-4xl font-black tracking-tight text-slate-800 dark:text-white mb-2">
               Kamar Tersedia
@@ -86,12 +100,54 @@ export default function LandingPage() {
           <div className="hidden md:flex bg-white dark:bg-slate-800 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
             <span className="font-bold text-slate-700 dark:text-slate-300">
-              {rooms.length} Kosong
+              {filteredRooms.length} Kosong
             </span>
           </div>
         </div>
 
-        {rooms.length === 0 ? (
+        {/* Filter UI */}
+        {rooms.length > 0 && (
+          <div className="flex gap-3 mb-10 overflow-x-auto pb-2 scrollbar-hide">
+            <button
+              onClick={() => {
+                setFilterType('ALL');
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${filterType === 'ALL' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              Semua Tipe
+            </button>
+            <button
+              onClick={() => {
+                setFilterType('1200000');
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${filterType === '1200000' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              Standar (Rp 1.2M)
+            </button>
+            <button
+              onClick={() => {
+                setFilterType('1500000');
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${filterType === '1500000' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              Menengah (Rp 1.5M)
+            </button>
+            <button
+              onClick={() => {
+                setFilterType('2000000');
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${filterType === '2000000' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              VIP (Rp 2.0M)
+            </button>
+          </div>
+        )}
+
+        {filteredRooms.length === 0 ? (
           <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <h3 className="text-2xl font-black text-slate-400 dark:text-slate-500 mb-2">
               Mohon Maaf 🙏
@@ -102,7 +158,7 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {rooms.map((r: any) => (
+            {displayedRooms.map((r: any) => (
               <div
                 key={r.id}
                 className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/60 dark:border-slate-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all flex flex-col group"
@@ -169,6 +225,29 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-16">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              className="px-6 py-3 rounded-2xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              ← Sebelumnya
+            </button>
+            <span className="font-bold text-slate-500 dark:text-slate-400">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              className="px-6 py-3 rounded-2xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Selanjutnya →
+            </button>
           </div>
         )}
       </main>
