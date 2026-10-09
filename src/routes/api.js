@@ -129,15 +129,132 @@ router.get('/invoices', async (req, res) => {
       history,
       metrics: {
         revenue: metrics[0].current_month_revenue || 0,
-        paidCount: metrics[0].current_month_paid_count || 0
-      }
+        paidCount: metrics[0].current_month_paid_count || 0,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint untuk mengambil tiket laporan kerusakan
+// Endpoint untuk meminta OTP Tenant
+router.post('/tenant/request-otp', async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'Nomor WhatsApp wajib diisi' });
+
+  // Normalisasi nomor HP ke format 628...
+  const cleanPhone = phone.replace(/\D/g, '').replace(/^0/, '62');
+  const phoneSuffix =
+    cleanPhone.length > 9 ? cleanPhone.substring(cleanPhone.length - 9) : cleanPhone;
+
+  try {
+    // 1. Cek apakah nomor ini adalah penyewa aktif
+    const { rows: tenants } = await pool.query(
+      `SELECT t.name FROM tenants t 
+       JOIN room_leases rl ON rl.tenant_id = t.id 
+       WHERE rl.status = 'ACTIVE' 
+         AND REGEXP_REPLACE(t.phone_number, '\\D', '', 'g') LIKE '%' || $1
+       LIMIT 1`,
+      [phoneSuffix]
+    );
+
+    if (tenants.length === 0) {
+      return res.status(404).json({ error: 'Nomor ini tidak terdaftar sebagai penyewa aktif.' });
+    }
+
+    // 2. Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Simpan/Update OTP di database (berlaku 5 menit)
+    await pool.query(
+      `INSERT INTO otp_requests (phone_number, otp_code, expires_at) 
+       VALUES ($1, $2, NOW() + INTERVAL '5 minutes')
+       ON CONFLICT (phone_number) 
+       DO UPDATE SET otp_code = EXCLUDED.otp_code, expires_at = EXCLUDED.expires_at`,
+      [cleanPhone, otpCode]
+    );
+
+    // 4. Kirim OTP via Bot WA
+    const { sendWA } = require('../services/wa');
+    const msg = `Halo ${tenants[0].name},\n\nKode OTP rahasia Anda untuk masuk ke Portal BeresKos adalah:\n*${otpCode}*\n\nKode ini berlaku selama 5 menit. JANGAN BERIKAN kode ini ke siapapun.`;
+    sendWA(cleanPhone, msg);
+
+    res.json({ success: true, cleanPhone });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint untuk Verifikasi OTP Tenant
+router.post('/tenant/verify-otp', async (req, res) => {
+  const { phone, otp } = req.body;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM otp_requests WHERE phone_number = $1 AND otp_code = $2 AND expires_at > NOW()`,
+      [phone, otp]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Kode OTP salah atau sudah kedaluwarsa.' });
+    }
+
+    // Jika sukses, hapus OTP agar tidak bisa dipakai ulang
+    await pool.query(`DELETE FROM otp_requests WHERE phone_number = $1`, [phone]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint untuk mengambil detail Dashboard Khusus Tenant yang sedang login
+router.get('/tenant/me', async (req, res) => {
+  const { phone } = req.query;
+  const phoneSuffix = phone.length > 9 ? phone.substring(phone.length - 9) : phone;
+
+  try {
+    // Info Kamar & Kontrak
+    const leaseRes = await pool.query(
+      `
+      SELECT rl.id as lease_id, r.room_number, r.monthly_price, t.name, t.id_card_url, rl.due_day_of_month
+      FROM tenants t
+      JOIN room_leases rl ON rl.tenant_id = t.id
+      JOIN rooms r ON rl.room_id = r.id
+      WHERE rl.status = 'ACTIVE' 
+        AND REGEXP_REPLACE(t.phone_number, '\\D', '', 'g') LIKE '%' || $1
+      ORDER BY rl.id DESC LIMIT 1
+    `,
+      [phoneSuffix]
+    );
+
+    if (!leaseRes.rows.length) return res.status(404).json({ error: 'Kontrak tidak ditemukan' });
+
+    const tenant = leaseRes.rows[0];
+
+    // Riwayat Invoices (Khusus kontrak dia saja)
+    const invRes = await pool.query(
+      `
+      SELECT id, total_amount, status, created_at
+      FROM invoices 
+      WHERE lease_id = $1
+      ORDER BY created_at DESC
+    `,
+      [tenant.lease_id]
+    );
+
+    res.json({
+      room_number: tenant.room_number,
+      name: tenant.name,
+      monthly_price: tenant.monthly_price,
+      due_day_of_month: tenant.due_day_of_month,
+      id_card_url: tenant.id_card_url,
+      invoices: invRes.rows,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/tickets', async (req, res) => {
   try {
     const { rows } = await pool.query(`

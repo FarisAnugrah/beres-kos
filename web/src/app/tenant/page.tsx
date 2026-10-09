@@ -1,97 +1,145 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function TenantView() {
-  const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
-  const [announcements, setAnnouncements] = useState([]);
+export default function TenantLogin() {
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState(1); // 1 = Input Phone, 2 = Input OTP
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-  useEffect(() => {
-    fetch('/api/utilities/ledger')
-      .then((res) => res.json())
-      .then((data) => setLedger(data))
-      .catch((err) => console.error(err));
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    fetch('/api/announcements')
-      .then((res) => res.json())
-      .then((data) => setAnnouncements(data))
-      .catch((err) => console.error(err));
-  }, []);
+    try {
+      const res = await fetch('/api/tenant/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Simpan nomor yg sudah dinormalisasi (berawalan 62)
+      setPhone(data.cleanPhone);
+      setStep(2);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/tenant/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Jika berhasil, simpan nomor HP ini di localStorage sebagai sesi "Login" di frontend
+      localStorage.setItem('tenant_phone', phone);
+      router.push('/tenant/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <main className="p-8 max-w-2xl mx-auto font-sans bg-slate-50 min-h-screen">
-      <div className="text-center mb-10 pt-8">
-        <h1 className="text-4xl font-black text-slate-800">Portal BeresKos</h1>
-        <p className="text-slate-500 mt-2 font-medium">Informasi & Transparansi Khusus Penghuni</p>
-      </div>
-
-      {/* Notice Board */}
-      {announcements.length > 0 && (
-        <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 p-8 rounded-3xl border border-indigo-600 shadow-lg mb-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-              ></path>
-            </svg>
-            Papan Pengumuman
-          </h2>
-          <div className="space-y-4 relative z-10">
-            {announcements.map((ann: any) => (
-              <div
-                key={ann.id}
-                className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20"
-              >
-                <p className="font-medium leading-relaxed">{ann.message}</p>
-                <p className="text-xs font-bold text-indigo-200 mt-3">
-                  {new Date(ann.created_at).toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            ))}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+      <div className="bg-white p-8 md:p-12 rounded-[2rem] shadow-xl border border-slate-100 max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 mx-auto mb-6">
+            <span className="font-black text-3xl text-white leading-none">B</span>
           </div>
-        </div>
-      )}
-
-      {/* Ledger Section (Real Data) */}
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
-        <h2 className="text-xl font-bold mb-4 text-slate-800">Transparansi Kas Bersama</h2>
-        <div className="text-5xl font-black text-blue-600 mb-8 tracking-tight">
-          Rp {ledger.balance?.toLocaleString('id-ID') || 0}
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Portal Penyewa</h1>
+          <p className="text-slate-500 font-medium mt-2">
+            Masuk untuk melihat tagihan dan laporan kos Anda.
+          </p>
         </div>
 
-        <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-          <ul className="divide-y divide-slate-200">
-            {ledger.transactions?.length === 0 ? (
-              <li className="p-6 text-center text-slate-400 font-medium text-sm">
-                Belum ada aktivitas belanja atau iuran.
-              </li>
-            ) : (
-              ledger.transactions?.map((tx: any) => (
-                <li
-                  key={tx.id}
-                  className="p-4 flex justify-between items-center text-sm hover:bg-slate-100 transition-colors"
-                >
-                  <span className="text-slate-600 font-medium">{tx.notes}</span>
-                  <span
-                    className={`font-bold px-3 py-1 rounded-full ${tx.type === 'INFLOW' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                  >
-                    {tx.type === 'INFLOW' ? '+' : '-'} Rp {tx.amount.toLocaleString('id-ID')}
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
+        {error && (
+          <div className="bg-rose-50 text-rose-600 p-4 rounded-xl font-medium text-sm mb-6 border border-rose-100 text-center">
+            {error}
+          </div>
+        )}
+
+        {step === 1 ? (
+          <form onSubmit={handleRequestOtp} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Nomor WhatsApp Terdaftar
+              </label>
+              <input
+                required
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Contoh: 08123456789"
+                className="w-full border-2 border-slate-200 rounded-2xl p-4 focus:border-indigo-600 outline-none transition-colors font-medium text-slate-800"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/25 disabled:opacity-50"
+            >
+              {loading ? 'Mengirim...' : 'Kirim Kode OTP'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Kode OTP (6 Digit)
+              </label>
+              <p className="text-xs text-slate-500 mb-4">
+                Kode telah dikirim ke WA <b>{phone}</b>
+              </p>
+              <input
+                required
+                type="text"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="000000"
+                className="w-full border-2 border-slate-200 rounded-2xl p-4 text-center text-3xl tracking-[1em] font-black focus:border-indigo-600 outline-none transition-colors text-slate-800"
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                type="submit"
+                disabled={loading || otp.length !== 6}
+                className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/25 disabled:opacity-50"
+              >
+                {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="w-full text-slate-500 font-bold py-3 hover:text-slate-700 transition-colors"
+              >
+                Ganti Nomor
+              </button>
+            </div>
+          </form>
+        )}
       </div>
-    </main>
+    </div>
   );
 }
