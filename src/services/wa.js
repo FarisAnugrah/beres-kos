@@ -119,6 +119,15 @@ client.on('message_create', async (msg) => {
     } catch (err) {
       console.error('[WA] Error memproses laporan:', err);
     }
+  } else {
+    // FALLBACK AUTO-REPLY
+    // Jangan merespons jika pesan dikirim oleh bot/admin itu sendiri untuk menghindari infinite loop chatting.
+    if (!msg.fromMe) {
+      // Jika pesan tidak mengandung 'LAPOR ', bot beri tahu cara penggunaan yang benar
+      msg.reply(
+        `🤖 *Auto-Reply BeresKos*\n\nHalo! Ini adalah asisten mesin otomatis BeresKos.\n\nJika Anda ingin melaporkan kerusakan/komplain kamar, harap ketik pesan dengan awalan kata *LAPOR*.\n_Contoh: LAPOR AC kamar saya kurang dingin._\n\nUntuk keperluan mendesak, silakan hubungi/telepon Admin secara langsung.`
+      );
+    }
   }
 });
 
