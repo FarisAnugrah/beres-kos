@@ -2,6 +2,7 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 const qrcode = require('qrcode');
 const pool = require('../config/db');
+const { normalizePhone, phoneSQL } = require('./auth');
 
 console.log('[WA] Menginisialisasi Bot WhatsApp...');
 
@@ -67,24 +68,12 @@ client.on('message_create', async (msg) => {
       }
     }
 
-    console.log(
-      '[DEBUG WA] Laporan masuk. rawSender:',
-      rawSender,
-      ' | sender:',
-      sender,
-      ' | contact.number:',
-      contact.number
-    );
-
     try {
       // Cari penyewa aktif berdasarkan nomor WA
       // Karena input Admin mungkin bervariasi (0812.., 6281.., +6281..), dan sender WA selalu '6281...'
       // Kita membuang angka non-digit dan mengekstrak nomor HP aslinya saja.
-      const cleanSender = sender.replace(/\D/g, '');
-      const phoneSuffix =
-        cleanSender.length > 9 ? cleanSender.substring(cleanSender.length - 9) : cleanSender;
-
-      console.log('[DEBUG WA] cleanSender:', cleanSender, ' | phoneSuffix:', phoneSuffix);
+      const cleanSender = normalizePhone(sender);
+      if (!cleanSender || msg.fromMe) return;
 
       const { rows } = await pool.query(
         `
@@ -93,14 +82,12 @@ client.on('message_create', async (msg) => {
         JOIN room_leases rl ON rl.tenant_id = t.id
         JOIN rooms r ON rl.room_id = r.id
         WHERE rl.status = 'ACTIVE' 
-          AND REGEXP_REPLACE(t.phone_number, '\\D', '', 'g') LIKE '%' || $1
+          AND ${phoneSQL} = $1
         ORDER BY rl.id DESC
         LIMIT 1
       `,
-        [phoneSuffix]
+        [cleanSender]
       );
-
-      console.log('[DEBUG WA] DB Result:', rows);
 
       if (rows.length > 0) {
         const { room_id, room_number, name } = rows[0];
@@ -197,7 +184,8 @@ const sendWAWithLocalImage = async (phone, caption, localFilePath) => {
     const filename = path.basename(localFilePath);
 
     // Asumsi server backend jalan di port 3000
-    const imageUrl = `http://localhost:3000/uploads/${filename}`;
+    if (!process.env.APP_ORIGIN) return false;
+    const imageUrl = `${process.env.APP_ORIGIN}/uploads/${filename}`;
 
     const finalMessage = `${caption}\n\n*Lihat Foto Bukti Perbaikan:* \n${imageUrl}`;
 

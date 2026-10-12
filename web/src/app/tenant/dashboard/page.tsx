@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { logoutAction } from '../../actions';
 
 export default function TenantDashboard() {
   const [profile, setProfile] = useState<any>(null);
@@ -10,14 +11,7 @@ export default function TenantDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const phone = localStorage.getItem('tenant_phone');
-    if (!phone) {
-      router.push('/tenant');
-      return;
-    }
-
-    // Ambil data profil khusus penyewa ini
-    fetch(`/api/tenant/me?phone=${phone}`)
+    fetch('/api/tenant/me')
       .then((res) => {
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
@@ -61,9 +55,13 @@ export default function TenantDashboard() {
           <p className="text-slate-500 mt-1 font-medium">Kamar {profile.room_number}</p>
         </div>
         <button
-          onClick={() => {
-            localStorage.removeItem('tenant_phone');
-            router.push('/tenant');
+          onClick={async () => {
+            try {
+              await logoutAction();
+              router.push('/tenant');
+            } catch {
+              alert('Logout gagal. Silakan coba lagi.');
+            }
           }}
           className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-100"
         >

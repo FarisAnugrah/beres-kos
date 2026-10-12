@@ -3,13 +3,11 @@ const pool = require('../config/db');
 const router = express.Router();
 
 router.post('/payment', async (req, res) => {
-  console.log('[WEBHOOK] Menerima notifikasi pembayaran:', req.body);
+  const invoiceId = req.body.external_id;
+  const status = req.body.status;
 
-  // Support payload dari Frontend (Dummy) ATAU Xendit (Real)
-  const invoiceId = req.body.invoiceId || req.body.external_id;
-  const status = req.body.status || 'PAID'; // Xendit mengirim status 'PAID' atau 'SETTLED'
-
-  if (!invoiceId) return res.status(400).json({ error: 'Missing invoiceId / external_id' });
+  if (typeof invoiceId !== 'string' || !/^[a-f0-9-]{36}$/i.test(invoiceId))
+    return res.status(400).json({ error: 'Invalid external_id' });
   if (status !== 'PAID' && status !== 'SETTLED') {
     console.log('[WEBHOOK] Diabaikan karena status bukan PAID/SETTLED:', status);
     return res.json({ success: true, ignored: true });
@@ -21,10 +19,13 @@ router.post('/payment', async (req, res) => {
     await client.query('BEGIN');
 
     const invRes = await client.query(
-      `UPDATE invoices SET status = 'PAID' WHERE id = $1 RETURNING id, lease_id`,
+      `UPDATE invoices SET status = 'PAID' WHERE id = $1 AND status = 'UNPAID' RETURNING id, lease_id`,
       [invoiceId]
     );
-    if (!invRes.rows.length) return res.status(404).json({ error: 'Invoice not found' });
+    if (!invRes.rows.length) {
+      await client.query('ROLLBACK');
+      return res.json({ success: true, ignored: true });
+    }
 
     // Cari nomor kamar
     const roomRes = await client.query(

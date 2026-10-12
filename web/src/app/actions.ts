@@ -1,21 +1,19 @@
-'use server';
-import { cookies } from 'next/headers';
+'use client';
 
 export async function loginAction(password: string) {
-  const validPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  if (password === validPassword) {
-    const cookieStore = await cookies();
-    cookieStore.set('auth_token', 'authenticated', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 1 minggu
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
     });
-    return true;
+    return response.ok;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete('auth_token');
+  const response = await fetch('/api/auth/logout', { method: 'POST' });
+  if (!response.ok) throw new Error('Logout failed');
 }

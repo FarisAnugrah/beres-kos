@@ -2,3 +2,9 @@ node_modules/
 .wwebjs_auth/
 .wwebjs_cache/
 uploads/
+.env
+.env.*
+!.env.example
+*.log
+sessions/
+*.tsbuildinfo

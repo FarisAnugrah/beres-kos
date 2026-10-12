@@ -12,7 +12,16 @@ router.get('/ledger', async (req, res) => {
 
     res.json({
       balance: poolRes.rows[0]?.balance || 0,
-      transactions: txRes.rows,
+      transactions:
+        req.session.role === 'admin'
+          ? txRes.rows
+          : txRes.rows.map(({ id, type, amount, created_at }) => ({
+              id,
+              type,
+              amount,
+              created_at,
+              notes: type === 'INFLOW' ? 'Iuran bersama' : 'Pengeluaran bersama',
+            })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -9,7 +9,7 @@ export default function LandingPage() {
   const ROOMS_PER_PAGE = 6;
 
   useEffect(() => {
-    fetch('/api/rooms')
+    fetch('/api/public/rooms')
       .then((res) => res.json())
       .then((data) => setRooms(data.filter((r: any) => r.status === 'VACANT')))
       .catch(console.error);

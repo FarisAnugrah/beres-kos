@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node --env-file=.env src/server.js",
     "worker": "node --env-file=.env src/workers/billingWorker.js",
-    "setup-db": "node --env-file=.env scripts/setup-db.js"
+    "setup-db": "node --env-file=.env scripts/setup-db.js",
+    "migrate-auth": "node --env-file=.env scripts/migrate-auth.js",
+    "test": "node --test tests/*.test.js"
   },
   "keywords": [],
   "author": "",

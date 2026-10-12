@@ -50,8 +50,6 @@ export default function TenantLogin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Jika berhasil, simpan nomor HP ini di localStorage sebagai sesi "Login" di frontend
-      localStorage.setItem('tenant_phone', phone);
       router.push('/tenant/dashboard');
     } catch (err: any) {
       setError(err.message);
