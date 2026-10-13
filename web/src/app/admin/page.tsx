@@ -1,23 +1,66 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { logoutAction } from '../actions';
+import Image from 'next/image';
+
+interface Room {
+  id: string;
+  room_number: string;
+  monthly_price: string | number;
+  status: string;
+  has_token_meter: boolean;
+  current_kwh: string | number | null;
+  active_lease_id: string | null;
+  tenant_name: string | null;
+  tenant_phone: string | null;
+  tenant_ktp: string | null;
+  start_date: string | null;
+  due_day_of_month: number | null;
+}
+
+interface Invoice {
+  id: string;
+  tenant_name: string;
+  room_number: string;
+  created_at: string;
+  status: string;
+  total_amount: string | number;
+}
+
+interface Ledger {
+  balance: string | number;
+  transactions: {
+    id: string;
+    created_at: string;
+    notes: string;
+    type: string;
+    amount: string | number;
+  }[];
+}
+
+interface Ticket {
+  id: string;
+  room_number: string;
+  tenant_name: string;
+  status: string;
+  description: string;
+}
 
 export default function Dashboard() {
-  const [rooms, setRooms] = useState([]);
-  const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
-  const [invoices, setInvoices] = useState([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [ledger, setLedger] = useState<Ledger>({ balance: 0, transactions: [] });
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceMetrics, setInvoiceMetrics] = useState({ revenue: 0, paidCount: 0 });
-  const [tickets, setTickets] = useState([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState('');
-  const [detailRoom, setDetailRoom] = useState<any>(null);
-  const [checkOutRoom, setCheckOutRoom] = useState<any>(null);
+  const [detailRoom, setDetailRoom] = useState<Room | null>(null);
+  const [checkOutRoom, setCheckOutRoom] = useState<Room | null>(null);
   const [resolveTicketId, setResolveTicketId] = useState<string>('');
   const [transferLeaseId, setTransferLeaseId] = useState<string>('');
   const [filterType, setFilterType] = useState('ALL');
@@ -41,51 +84,47 @@ export default function Dashboard() {
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const router = useRouter();
 
-  const loadData = async () => {
-    try {
-      const resR = await fetch('/api/rooms');
-      if (resR.ok) setRooms(await resR.json());
-
-      const resL = await fetch('/api/utilities/ledger');
-      if (resL.ok) setLedger(await resL.json());
-
-      const resI = await fetch('/api/invoices');
-      if (resI.ok) {
-        const invData = await resI.json();
-        setInvoices(invData.history || []);
-        setInvoiceMetrics(invData.metrics || { revenue: 0, paidCount: 0 });
-      }
-
-      const resT = await fetch('/api/tickets');
-      if (resT.ok) setTickets(await resT.json());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadData = useCallback(() => {
+    return Promise.all(
+      [
+        fetch('/api/rooms').then(async (res) => {
+          if (res.ok) setRooms(await res.json());
+        }),
+        fetch('/api/utilities/ledger').then(async (res) => {
+          if (res.ok) setLedger(await res.json());
+        }),
+        fetch('/api/invoices').then(async (res) => {
+          if (res.ok) {
+            const invData = await res.json();
+            setInvoices(invData.history || []);
+            setInvoiceMetrics(invData.metrics || { revenue: 0, paidCount: 0 });
+          }
+        }),
+        fetch('/api/tickets').then(async (res) => {
+          if (res.ok) setTickets(await res.json());
+        }),
+      ].map((request) => request.catch(console.error))
+    );
+  }, []);
 
   useEffect(() => {
-    loadData();
+    loadData().finally(() => setLoading(false));
     // Load dark mode preference
     if (
       localStorage.getItem('theme') === 'dark' ||
       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
     ) {
-      setIsDarkMode(true);
       document.documentElement.classList.add('dark');
     }
-  }, []);
+  }, [loadData]);
 
   const toggleDarkMode = () => {
-    if (isDarkMode) {
+    if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
-      setIsDarkMode(false);
     } else {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      setIsDarkMode(true);
     }
   };
 
@@ -209,15 +248,15 @@ export default function Dashboard() {
       </div>
     );
 
-  const occupiedCount = rooms.filter((r: any) => r.status === 'OCCUPIED').length;
+  const occupiedCount = rooms.filter((r) => r.status === 'OCCUPIED').length;
   const vacantCount = rooms.length - occupiedCount;
 
-  const filteredRooms = rooms.filter((r: any) => {
+  const filteredRooms = rooms.filter((r) => {
     if (filterType === 'ALL') return true;
     return Number(r.monthly_price) === Number(filterType);
   });
 
-  const filteredInvoices = invoices.filter((inv: any) => {
+  const filteredInvoices = invoices.filter((inv) => {
     if (!invoiceStart && !invoiceEnd) return true;
     const invDate = new Date(inv.created_at).toISOString().split('T')[0];
     if (invoiceStart && invDate < invoiceStart) return false;
@@ -231,7 +270,7 @@ export default function Dashboard() {
     invoicePage * INVOICE_PER_PAGE
   );
 
-  const filteredLedger = ledger.transactions.filter((tx: any) => {
+  const filteredLedger = ledger.transactions.filter((tx) => {
     if (!ledgerStart && !ledgerEnd) return true;
     const txDate = new Date(tx.created_at).toISOString().split('T')[0];
     if (ledgerStart && txDate < ledgerStart) return false;
@@ -373,27 +412,34 @@ export default function Dashboard() {
               <button
                 onClick={toggleDarkMode}
                 className="p-2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
-                title={isDarkMode ? 'Beralih ke Terang' : 'Beralih ke Gelap'}
+                aria-label="Ubah tema terang atau gelap"
               >
-                {isDarkMode ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                    ></path>
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                    ></path>
-                  </svg>
-                )}
+                <svg
+                  className="hidden dark:block w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  ></path>
+                </svg>
+                <svg
+                  className="block dark:hidden w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  ></path>
+                </svg>
               </button>
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
@@ -489,7 +535,7 @@ export default function Dashboard() {
 
         {/* Room Grid (FinTrack Style Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredRooms.map((room: any) => (
+          {filteredRooms.map((room) => (
             <div
               key={room.id}
               className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/60 dark:border-slate-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all flex flex-col group"
@@ -536,7 +582,7 @@ export default function Dashboard() {
                 <div className="flex-grow flex flex-col">
                   <p
                     className="text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight mb-4 truncate"
-                    title={room.tenant_name}
+                    title={room.tenant_name ?? undefined}
                   >
                     {room.tenant_name}
                   </p>
@@ -545,11 +591,13 @@ export default function Dashboard() {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-slate-500 dark:text-slate-400 font-medium">Masuk</span>
                       <span className="font-bold text-slate-700 dark:text-slate-300">
-                        {new Date(room.start_date).toLocaleDateString('id-ID', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+                        {room.start_date
+                          ? new Date(room.start_date).toLocaleDateString('id-ID', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '-'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
@@ -599,7 +647,10 @@ export default function Dashboard() {
                   </button>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setTransferLeaseId(room.active_lease_id)}
+                      disabled={!room.active_lease_id}
+                      onClick={() =>
+                        room.active_lease_id && setTransferLeaseId(room.active_lease_id)
+                      }
                       className="w-1/3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-3 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-all shadow-sm"
                       title="Pindah Kamar"
                     >
@@ -689,7 +740,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                  {displayedInvoices.map((inv: any) => (
+                  {displayedInvoices.map((inv) => (
                     <tr
                       key={inv.id}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors"
@@ -824,7 +875,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                  {displayedLedger.map((tx: any) => (
+                  {displayedLedger.map((tx) => (
                     <tr
                       key={tx.id}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors"
@@ -890,7 +941,7 @@ export default function Dashboard() {
             Laporan Kerusakan & Komplain
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayedTickets.map((t: any) => (
+            {displayedTickets.map((t) => (
               <div
                 key={t.id}
                 className={`p-6 rounded-2xl border-2 transition-all shadow-sm flex flex-col ${t.status === 'PENDING' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60'}`}
@@ -911,7 +962,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="text-slate-700 dark:text-slate-300 font-medium mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 italic break-words flex-grow">
-                  "{t.description}"
+                  &quot;{t.description}&quot;
                 </div>
                 {t.status === 'PENDING' && (
                   <button
@@ -1281,7 +1332,10 @@ export default function Dashboard() {
                     rel="noreferrer"
                     className="block group"
                   >
-                    <img
+                    <Image
+                      unoptimized
+                      width={400}
+                      height={192}
                       src={detailRoom.tenant_ktp}
                       alt="KTP"
                       className="w-full h-48 object-cover rounded-2xl border-2 border-slate-200 dark:border-slate-600 group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-colors shadow-sm"
@@ -1417,8 +1471,8 @@ export default function Dashboard() {
                 >
                   <option value="">-- Pilih Kamar Kosong --</option>
                   {rooms
-                    .filter((r: any) => r.status === 'VACANT')
-                    .map((r: any) => (
+                    .filter((r) => r.status === 'VACANT')
+                    .map((r) => (
                       <option key={r.id} value={r.id}>
                         Kamar {r.room_number} (Rp {Number(r.monthly_price).toLocaleString('id-ID')})
                       </option>
@@ -1505,7 +1559,11 @@ export default function Dashboard() {
                 Batal
               </button>
               <button
-                onClick={() => handleConfirmCheckOut(checkOutRoom.active_lease_id)}
+                disabled={!checkOutRoom.active_lease_id}
+                onClick={() =>
+                  checkOutRoom.active_lease_id &&
+                  handleConfirmCheckOut(checkOutRoom.active_lease_id)
+                }
                 className="flex-1 py-3 font-bold text-white bg-rose-600 rounded-2xl hover:bg-rose-700 shadow-lg shadow-rose-600/30 transition-all flex flex-col items-center justify-center leading-tight"
               >
                 <span>Konfirmasi Checkout</span>

@@ -3,10 +3,37 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { logoutAction } from '../../actions';
 
+interface Profile {
+  name: string;
+  room_number: string;
+  invoices: {
+    id: string;
+    total_amount: string | number;
+    created_at: string;
+    status: string;
+  }[];
+}
+
+interface Ledger {
+  balance: string | number;
+  transactions: {
+    id: string;
+    notes: string;
+    type: string;
+    amount: string | number;
+  }[];
+}
+
+interface Announcement {
+  id: string;
+  message: string;
+  created_at: string;
+}
+
 export default function TenantDashboard() {
-  const [profile, setProfile] = useState<any>(null);
-  const [ledger, setLedger] = useState({ balance: 0, transactions: [] });
-  const [announcements, setAnnouncements] = useState([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [ledger, setLedger] = useState<Ledger>({ balance: 0, transactions: [] });
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -35,7 +62,7 @@ export default function TenantDashboard() {
       .then((res) => res.json())
       .then((data) => setAnnouncements(data))
       .catch((err) => console.error(err));
-  }, []);
+  }, [router]);
 
   if (loading || !profile) {
     return (
@@ -78,7 +105,7 @@ export default function TenantDashboard() {
               Belum ada tagihan masuk.
             </div>
           ) : (
-            profile.invoices.map((inv: any) => (
+            profile.invoices.map((inv) => (
               <div
                 key={inv.id}
                 className="flex justify-between items-center p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors"
@@ -121,7 +148,7 @@ export default function TenantDashboard() {
             Papan Pengumuman
           </h2>
           <div className="space-y-4 relative z-10">
-            {announcements.map((ann: any) => (
+            {announcements.map((ann) => (
               <div
                 key={ann.id}
                 className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20"
@@ -156,7 +183,7 @@ export default function TenantDashboard() {
                 Belum ada aktivitas belanja atau iuran.
               </li>
             ) : (
-              ledger.transactions?.map((tx: any) => (
+              ledger.transactions?.map((tx) => (
                 <li
                   key={tx.id}
                   className="p-4 flex justify-between items-center text-sm hover:bg-slate-100 transition-colors"

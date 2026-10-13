@@ -1,9 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+
+interface Room {
+  id: string;
+  room_number: string;
+  monthly_price: string | number;
+  status: string;
+  has_token_meter: boolean;
+}
 
 export default function LandingPage() {
-  const [rooms, setRooms] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [filterType, setFilterType] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const ROOMS_PER_PAGE = 6;
@@ -11,7 +19,7 @@ export default function LandingPage() {
   useEffect(() => {
     fetch('/api/public/rooms')
       .then((res) => res.json())
-      .then((data) => setRooms(data.filter((r: any) => r.status === 'VACANT')))
+      .then((data: Room[]) => setRooms(data.filter((r) => r.status === 'VACANT')))
       .catch(console.error);
 
     // Sinkronisasi dengan preferensi tema Admin
@@ -19,12 +27,11 @@ export default function LandingPage() {
       localStorage.getItem('theme') === 'dark' ||
       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
     ) {
-      setIsDarkMode(true);
       document.documentElement.classList.add('dark');
     }
   }, []);
 
-  const filteredRooms = rooms.filter((r: any) => {
+  const filteredRooms = rooms.filter((r) => {
     if (filterType === 'ALL') return true;
     return Number(r.monthly_price) === Number(filterType);
   });
@@ -158,14 +165,16 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {displayedRooms.map((r: any) => (
+            {displayedRooms.map((r) => (
               <div
                 key={r.id}
                 className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/60 dark:border-slate-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all flex flex-col group"
               >
                 <div className="h-48 bg-slate-200 dark:bg-slate-900 rounded-2xl relative overflow-hidden mb-6">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                  <img
+                  <Image
+                    unoptimized
+                    fill
                     src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80"
                     alt={`Kamar ${r.room_number}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"

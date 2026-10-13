@@ -28,8 +28,8 @@ export default function TenantLogin() {
       // Simpan nomor yg sudah dinormalisasi (berawalan 62)
       setPhone(data.cleanPhone);
       setStep(2);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -51,8 +51,8 @@ export default function TenantLogin() {
       if (!res.ok) throw new Error(data.error);
 
       router.push('/tenant/dashboard');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
