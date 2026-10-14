@@ -6,15 +6,19 @@ const redisConn = require('../config/redis');
 const { sendWA, sendWAWithQRIS } = require('../services/wa');
 const { createXenditInvoice } = require('../services/xendit');
 const { normalizePhone } = require('../services/auth');
+const { toCSV } = require('../services/csv');
 
 const router = express.Router();
 const billingQueue = new Queue('billing', { connection: redisConn });
-const upload = multer({ dest: 'uploads/', limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 },
+});
 
 // Endpoint untuk Export Laporan ke CSV
 router.get('/export-csv', async (req, res) => {
   try {
-    const { type } = req.query; // 'invoices' atau 'ledger'
+    const { type } = req.query;
 
     if (type === 'tenants') {
       const { rows } = await pool.query(`
@@ -29,20 +33,21 @@ router.get('/export-csv', async (req, res) => {
         ORDER BY r.room_number ASC
       `);
 
-      if (!rows.length) return res.send('Tidak ada penyewa aktif saat ini.');
+      const headers = [
+        'Nomor Kamar',
+        'Nama Lengkap',
+        'NIK KTP',
+        'No. HP/WA',
+        'Plat Kendaraan',
+        'Kontak Darurat',
+        'Status Sewa',
+        'Tgl Masuk',
+      ];
+      const csv = toCSV(headers, rows, ['NIK KTP', 'No. HP/WA', 'Kontak Darurat'], '-');
 
-      const headers = Object.keys(rows[0]).join(';');
-      const csv = rows
-        .map((row) =>
-          Object.values(row)
-            .map((v) => `"${(v || '-').toString().replace(/"/g, '""')}"`)
-            .join(';')
-        )
-        .join('\n');
-
-      res.header('Content-Type', 'text/csv');
+      res.header('Content-Type', 'text/csv; charset=utf-8');
       res.attachment('Rekap_Warga_Kos.csv');
-      return res.send(`\uFEFF${headers}\n${csv}`);
+      return res.send(csv);
     }
 
     if (type === 'invoices') {
@@ -57,20 +62,19 @@ router.get('/export-csv', async (req, res) => {
         ORDER BY i.created_at DESC
       `);
 
-      if (!rows.length) return res.send('Tidak ada data tagihan.');
+      const headers = [
+        'ID Invoice',
+        'Nama Penyewa',
+        'Kamar',
+        'Nominal (Rp)',
+        'Status',
+        'Tanggal Dibuat',
+      ];
+      const csv = toCSV(headers, rows);
 
-      const headers = Object.keys(rows[0]).join(';');
-      const csv = rows
-        .map((row) =>
-          Object.values(row)
-            .map((v) => `"${(v || '').toString().replace(/"/g, '""')}"`)
-            .join(';')
-        )
-        .join('\n');
-
-      res.header('Content-Type', 'text/csv');
+      res.header('Content-Type', 'text/csv; charset=utf-8');
       res.attachment('Laporan_Tagihan_BeresKos.csv');
-      return res.send(`\uFEFF${headers}\n${csv}`);
+      return res.send(csv);
     }
 
     if (type === 'ledger') {
@@ -81,25 +85,19 @@ router.get('/export-csv', async (req, res) => {
         ORDER BY created_at DESC
       `);
 
-      if (!rows.length) return res.send('Tidak ada data transaksi kas.');
+      const headers = ['Tipe (IN/OUT)', 'Nominal (Rp)', 'Keterangan', 'Tanggal Transaksi'];
+      const csv = toCSV(headers, rows);
 
-      const headers = Object.keys(rows[0]).join(';');
-      const csv = rows
-        .map((row) =>
-          Object.values(row)
-            .map((v) => `"${(v || '').toString().replace(/"/g, '""')}"`)
-            .join(';')
-        )
-        .join('\n');
-
-      res.header('Content-Type', 'text/csv');
+      res.header('Content-Type', 'text/csv; charset=utf-8');
       res.attachment('Laporan_KasDapur_BeresKos.csv');
-      return res.send(`\uFEFF${headers}\n${csv}`);
+      return res.send(csv);
     }
 
     res
       .status(400)
-      .json({ error: 'Tipe export tidak valid. Gunakan ?type=invoices atau ?type=ledger' });
+      .json({
+        error: 'Tipe export tidak valid. Gunakan ?type=tenants, ?type=invoices atau ?type=ledger',
+      });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
